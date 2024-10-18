@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "contentVersion": "1.0.0.0",
+  "ConfigurationName": "PROD",
+  "ApplicationName": "contoso",
+  "Domain": "contoso.com",
+  "CertFileShared": "\\\\srvfileshared.contoso.com\\certsfolder",
+  "Trusts": [
+    {
+      "LocalFarm": "SEARCH",
+      "RemoteFarms": ["CONTENT", "SERVICES"],
+      "Services": ["CONTOSOPRODSCH"]
+    },
+    {
+      "LocalFarm": "SERVICES",
+      "RemoteFarms": ["CONTENT", "SEARCH"],
+      "Services": ["CONTOSOPRODUPS", "CONTOSOPRODMMS", "CONTOSOPRODSSA"]
+    },
+    {
+      "LocalFarm": "CONTENT",
+      "RemoteFarms": ["SEARCH", "SERVICES"],
+      "Services": ["Content"]
+    }
+  ],
+  "Farms": [
+    {
+      "Name": "SEARCH",
+      "Server": "srvcontososearch"
+    },
+    {
+      "Name": "SERVICES",
+      "Server": "srvcontososervices"
+    },
+    {
+      "Name": "CONTENT",
+      "Server": "srvcontosocontent"
+    }
+  ]
+}

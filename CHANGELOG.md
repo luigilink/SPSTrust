@@ -3,7 +3,7 @@
 The format is based on and uses the types of changes according to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2023-10-17
+## [Unreleased] - 2023-10-18
 
 ### Added
 
@@ -23,4 +23,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - config.yml
 - Wiki Documentation in repository - Add :
   - wiki/Home.md
+  - wiki/Getting-Started.md
   - .github/workflows/wiki.yml

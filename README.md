@@ -21,6 +21,15 @@ Required because this module now implements class-based resources.
 Class-based resources can only work on computers with Windows
 Management Framework 5.0 or above.
 The preferred version is PowerShell 5.1 or higher, which ships with Windows 10 or Windows Server 2016.
+This is discussed further on the [SPSTrust Wiki Getting-Started](https://github.com/luigilink/SPSTrust/wiki/Getting-Started)
+
+## CredSSP
+
+Impersonation is handled using the `Invoke-Command` cmdlet in PowerShell, together with the creation of a "remote" session via `New-PSSession`. In the SPSTrust script, we authenticate as the InstallAccount and specify CredSSP as the authentication mechanism. This is explained further in the [SPSTrust Wiki Getting-Started](https://github.com/luigilink/SPSTrust/wiki/Getting-Started)
+
+## Documentation
+
+For detailed usage, configuration, and getting started information, visit the [SPSTrust Wiki](https://github.com/luigilink/SPSTrust/wiki)
 
 ## Changelog
 
