@@ -26,8 +26,8 @@ In the above example, `$CredSSPDelegates` can be a wildcard name (such as "\*.co
 ## Installation
 
 1. [Download the latest release](https://github.com/luigilink/SPSTrust/releases/latest) and unzip to a directory on your SharePoint Server.
-2. Prepare your JSON configuration file with the required SMTP and farm details.
-3. Add the script in task scheduler by running the following command:
+2. Prepare your JSON configuration file, see [Configuration](./Configuration) page for more details.
+3. Run the script with the following command:
 
 ```powershell
 .\SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -FarmAccount (Get-Credential)
