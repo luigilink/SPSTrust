@@ -119,32 +119,43 @@ Start-Process -FilePath "$env:SystemRoot\system32\powercfg.exe" -ArgumentList '/
 # Export STS and ROOT certificates for each Farm
 foreach ($spFarm in $spFarmsObj) {
   $spRootCertPath = "$($certFolder)\$($spFarm.Name)_ROOT.cer"
+  $spSTSCertPath = "$($certFolder)\$($spFarm.Name)_STS.cer"
   $spTargetServer = "$($spFarm.Server).$scriptFQDN"
 
   try {
-    # Check if the ROOT certificate already exists; if not, export it
-    if (-Not (Test-Path $spRootCertPath)) {
-      Export-SPSTrustedRootAuthority -Name $spFarm.Name -Server $spTargetServer -InstallAccount $FarmAccount -CertificateFilePath $certFolder
-      Write-Output "Exported ROOT certificate for $($spFarm.Name)."
+    # If CleanServices switch is enabled, remove existing ROOT certificate
+    if ($CleanServices) {
+      # WRITE CODE HERE REMOVE File in file shared
     }
     else {
-      Write-Output "ROOT certificate for $($spFarm.Name) already exists."
+      # Check if the ROOT certificate already exists; if not, export it
+      if (-Not (Test-Path $spRootCertPath)) {
+        Export-SPSTrustedRootAuthority -Name $spFarm.Name -Server $spTargetServer -InstallAccount $FarmAccount -CertificateFilePath $certFolder
+        Write-Output "Exported ROOT certificate for $($spFarm.Name)."
+      }
+      else {
+        Write-Output "ROOT certificate for $($spFarm.Name) already exists."
+      }
     }
   }
   catch {
     Write-Error "Failed to export ROOT certificate for $($spFarm.Name): $_"
-  }
-
-  $spSTSCertPath = "$($certFolder)\$($spFarm.Name)_STS.cer"
+  }  
 
   try {
-    # Check if the STS certificate already exists; if not, export it
-    if (-Not (Test-Path $spSTSCertPath)) {
-      Export-SPSSecurityTokenCertificate -Name $spFarm.Name -Server $spTargetServer -InstallAccount $FarmAccount -CertificateFilePath $certFolder
-      Write-Output "Exported STS certificate for $($spFarm.Name)."
+    # If CleanServices switch is enabled, remove existing STS certificate
+    if ($CleanServices) {
+      # WRITE CODE HERE REMOVE File in file shared
     }
     else {
-      Write-Output "STS certificate for $($spFarm.Name) already exists."
+      # Check if the STS certificate already exists; if not, export it
+      if (-Not (Test-Path $spSTSCertPath)) {
+        Export-SPSSecurityTokenCertificate -Name $spFarm.Name -Server $spTargetServer -InstallAccount $FarmAccount -CertificateFilePath $certFolder
+        Write-Output "Exported STS certificate for $($spFarm.Name)."
+      }
+      else {
+        Write-Output "STS certificate for $($spFarm.Name) already exists."
+      }
     }
   }
   catch {
