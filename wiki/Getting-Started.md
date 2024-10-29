@@ -30,12 +30,8 @@ In the above example, `$CredSSPDelegates` can be a wildcard name (such as "\*.co
 3. Add the script in task scheduler by running the following command:
 
 ```powershell
-.\SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -Install -InstallAccount (Get-Credential)
+.\SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -FarmAccount (Get-Credential)
 ```
-
-> [!IMPORTANT]
-> Configure the StoredCredential parameter in JSON before running the script in installation mode.
-> Run the Install mode with the same account than you used the in InstallAccount parameter
 
 ## Next Step
 

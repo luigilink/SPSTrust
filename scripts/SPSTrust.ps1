@@ -1,32 +1,29 @@
 <#
     .SYNOPSIS
-    SPSTrust is a PowerShell script tool to configure trust Farm in your SharePoint environment.
+    SPSTrust is a PowerShell script tool to configure trusted farms in your SharePoint environment.
 
     .DESCRIPTION
-    SPSTrust.ps1 is a PowerShell script tool to configure SharePoint Trust.
-    It's compatible with PowerShell version 5.0 and later.
+    SPSTrust.ps1 is a PowerShell script that configures SharePoint trust relationships between farms.
+    Compatible with PowerShell version 5.0 and later.
 
     .PARAMETER ConfigFile
-    Need parameter ConfigFile, example:
-    PS D:\> E:\SCRIPT\SPSTrust.ps1 -ConfigFile 'contoso-PROD.json'
+    Specifies the path to the JSON configuration file, containing details about the application, environment, and certificate paths.
 
     .PARAMETER FarmAccount
-    Need parameter FarmAccount, example:
-    PS D:\> E:\SCRIPT\SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -FarmAccount (Get-Credential)
+    Specifies the credential for the service account that runs the script.
 
     .PARAMETER CleanServices
-    Need parameter CleanServices to remove connected service application, example:
-    PS D:\> E:\SCRIPT\SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -CleanServices
+    Optional switch to remove published services on each trusted farm.
 
     .EXAMPLE
-    SPSTrust.ps1 -ConfigFile 'contoso-PROD.json'
-    SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -CleanServices
+    SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -FarmAccount (Get-Credential)
+    SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -FarmAccount (Get-Credential) -CleanServices
 
     .NOTES
     FileName:	SPSTrust.ps1
     Author:		luigilink (Jean-Cyril DROUHIN)
-    Date:		Ocotober 17, 2024
-    Version:	1.0.0
+    Date:		October 17, 2024
+    Version:	1.1.0
 
     .LINK
     https://spjc.fr/
@@ -34,241 +31,260 @@
 #>
 param(
   [Parameter(Position = 1, Mandatory = $true)]
+  [ValidateScript({ Test-Path $_ -and $_ -like '*.json' })]
   [System.String]
-  $ConfigFile,
+  $ConfigFile, # Path to the configuration file
 
-  [Parameter(Position = 2)]
+  [Parameter(Position = 2, Mandatory = $true)]
   [System.Management.Automation.PSCredential]
-  $FarmAccount,
+  $FarmAccount, # Credential for the FarmAccount
 
   [Parameter(Position = 3)]
   [switch]
-  $CleanServices
+  $CleanServices # Switch parameter to clean services
 )
 
-#region Main
+#region Initialization
+# Clear the host console
 Clear-Host
+
+# Set the window title
 $Host.UI.RawUI.WindowTitle = "SPSTrust script running on $env:COMPUTERNAME"
+
+# Define the path to the helper module
 $script:HelperModulePath = Join-Path -Path $PSScriptRoot -ChildPath 'Modules'
+
+# Import the helper module
 Import-Module -Name (Join-Path -Path $script:HelperModulePath -ChildPath 'util.psm1') -Force
 
-if (Test-Path $ConfigFile) {
-  $jsonEnvCfg = get-content $ConfigFile | ConvertFrom-Json
-  $Application = $jsonEnvCfg.ApplicationName
-  $Environment = $jsonEnvCfg.ConfigurationName
-  $certFolder = $jsonEnvCfg.CertFileShared
-  $scriptFQDN = $jsonEnvCfg.Domain
-  $spFarmsObj = $jsonEnvCfg.Farms
-  $spTrustsObj = $jsonEnvCfg.Trusts
-}
-else {
-  Throw "Missing $ConfigFile"
+# Ensure the script is running with administrator privileges
+if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
+  Throw "Administrator rights are required. Please re-run this script as an Administrator."
 }
 
-# Define variable
+# Load the configuration file
+try {
+  if (Test-Path $ConfigFile) {
+    $jsonEnvCfg = Get-Content $ConfigFile | ConvertFrom-Json
+    $Application = $jsonEnvCfg.ApplicationName
+    $Environment = $jsonEnvCfg.ConfigurationName
+    $certFolder = $jsonEnvCfg.CertFileShared
+    $scriptFQDN = $jsonEnvCfg.Domain
+    $spFarmsObj = $jsonEnvCfg.Farms
+    $spTrustsObj = $jsonEnvCfg.Trusts
+  }
+  else {
+    Throw "Configuration file '$ConfigFile' not found."
+  }
+}
+catch {
+  Write-Error "Failed to load configuration file: $_"
+  Exit
+}
+
+# Define variables
 $SPSTrustVersion = '1.0.0'
 $getDateFormatted = Get-Date -Format yyyy-MM-dd
 $spsTrustFileName = "$($Application)-$($Environment)-$($getDateFormatted)"
 $currentUser = ([Security.Principal.WindowsIdentity]::GetCurrent()).Name
-$scriptRootPath = Split-Path -parent $MyInvocation.MyCommand.Definition
+$scriptRootPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $pathLogsFolder = Join-Path -Path $scriptRootPath -ChildPath 'Logs'
 
-# Initialize required folders
-# Check if the path exists
+# Initialize logs
 if (-Not (Test-Path -Path $pathLogsFolder)) {
-  # If the path does not exist, create the directory
-  New-Item -ItemType Directory -Path $pathLogsFolder
+  New-Item -ItemType Directory -Path $pathLogsFolder -Force
 }
-# Initialize Start-Transcript
 $pathLogFile = Join-Path -Path $pathLogsFolder -ChildPath ($spsTrustFileName + '.log')
-$DateStarted = Get-date
-$psVersion = ($host).Version.ToString()
+$DateStarted = Get-Date
+$psVersion = ($Host).Version.ToString()
 
+# Start transcript to log the output
 Start-Transcript -Path $pathLogFile -IncludeInvocationHeader
-Write-Output '-----------------------------------------------'
-Write-Output "| Automated Script   - Configuration Trust $SPSTrustVersion |"
-Write-Output "| Started on         - $DateStarted by $currentUser|"
-Write-Output "| PowerShell Version - $psVersion |"
-Write-Output '-----------------------------------------------'
 
-# Check Permission Level
-if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
-  Write-Warning -Message 'You do not have Administrator rights to run this script!`nPlease re-run this script as an Administrator!'
-  Break
-}
-else {
-  Write-Verbose -Message "Setting power management plan to `"High Performance`"..."
-  Start-Process -FilePath "$env:SystemRoot\system32\powercfg.exe" `
-    -ArgumentList '/s 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c' `
-    -NoNewWindow
-  
-  # Export STS and ROOT certificates for each Farm
-  foreach ($spFarm in $spFarmsObj) {
-    $spRootCertPath = "$($certFolder)\$($spFarm.Name)_ROOT.cer"
-    $spTargetServer = "$($spFarm.Server).$($scriptFQDN)"
-    if (Test-Path $spRootCertPath ) {
-      Write-Verbose -Message "$($spFarm.Name)_ROOT.cer already exists in file shared"
+# Output the script information
+Write-Output '-----------------------------------------------'
+Write-Output "| SPSTrust Configuration Script v$SPSTrustVersion |"
+Write-Output "| Started on - $DateStarted by $currentUser       |"
+Write-Output "| PowerShell Version - $psVersion                 |"
+Write-Output '-----------------------------------------------'
+#endregion
+
+#region Main Process
+
+# Set power management plan to "High Performance"
+Write-Verbose -Message "Setting power management plan to 'High Performance'..."
+Start-Process -FilePath "$env:SystemRoot\system32\powercfg.exe" -ArgumentList '/s 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c' -NoNewWindow
+
+# 1. Exchange trust certificates between the farms
+# Export STS and ROOT certificates for each Farm
+foreach ($spFarm in $spFarmsObj) {
+  $spRootCertPath = "$($certFolder)\$($spFarm.Name)_ROOT.cer"
+  $spTargetServer = "$($spFarm.Server).$scriptFQDN"
+
+  try {
+    # Check if the ROOT certificate already exists; if not, export it
+    if (-Not (Test-Path $spRootCertPath)) {
+      Export-SPSTrustedRootAuthority -Name $spFarm.Name -Server $spTargetServer -InstallAccount $FarmAccount -CertificateFilePath $certFolder
+      Write-Output "Exported ROOT certificate for $($spFarm.Name)."
     }
     else {
-      Export-SPSTrustedRootAuthority -Name $spFarm.Name `
-        -Server $spTargetServer `
-        -InstallAccount $FarmAccount `
-        -CertificateFilePath $certFolder
+      Write-Output "ROOT certificate for $($spFarm.Name) already exists."
     }
-
-    $spSTSCertPath = "$($certFolder)\$($spFarm.Name)_STS.cer"
-    if (Test-Path $spSTSCertPath ) {
-      Write-Verbose -Message "$($spFarm.Name)_STS.cer already exists in file shared"
-    }
-    else {
-      Export-SPSSecurityTokenCertificate -Name $spFarm.Name `
-        -Server $spTargetServer `
-        -InstallAccount $FarmAccount `
-        -CertificateFilePath $certFolder
-    }
-
-    $getFarmId = Get-SPSFarmId -Server $spTargetServer -InstallAccount $FarmAccount
-    New-Variable -Name "$($spFarm.Name)_FarmId" -Value $getFarmId -Force
   }
-  # Establishing trust on the publishing farm - Import STS and ROOT certificates
-  foreach ($spTrust in $spTrustsObj) {
-    $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
-    $spTargetServer = "$($spServer.Server).$($scriptFQDN)"
-    $spRemoteServers = $spTrust.RemoteFarms
-    $spServices = $spTrust.Services
-    $AppCode = $spTrust.AppCode
-    foreach ($spRemoteServer in $spRemoteServers) {
-      $spRootCertPath = "$($certFolder)\$($spRemoteServer)_ROOT.cer"
-      $currentValues = Get-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" `
-        -CertificateFilePath $spRootCertPath `
-        -InstallAccount $FarmAccount `
-        -Server $spTargetServer
+  catch {
+    Write-Error "Failed to export ROOT certificate for $($spFarm.Name): $_"
+  }
+
+  $spSTSCertPath = "$($certFolder)\$($spFarm.Name)_STS.cer"
+
+  try {
+    # Check if the STS certificate already exists; if not, export it
+    if (-Not (Test-Path $spSTSCertPath)) {
+      Export-SPSSecurityTokenCertificate -Name $spFarm.Name -Server $spTargetServer -InstallAccount $FarmAccount -CertificateFilePath $certFolder
+      Write-Output "Exported STS certificate for $($spFarm.Name)."
+    }
+    else {
+      Write-Output "STS certificate for $($spFarm.Name) already exists."
+    }
+  }
+  catch {
+    Write-Error "Failed to export STS certificate for $($spFarm.Name): $_"
+  }
+}
+
+# Establish trust on the publishing farm - Import STS and ROOT certificates
+foreach ($spTrust in $spTrustsObj) {
+  $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
+  $spTargetServer = "$($spServer.Server).$($scriptFQDN)"
+  $spRemoteServers = $spTrust.RemoteFarms
+  $spServices = $spTrust.Services
+
+  foreach ($spRemoteServer in $spRemoteServers) {
+    $spRootCertPath = "$($certFolder)\$($spRemoteServer)_ROOT.cer"
+    $currentValues = Get-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" -CertificateFilePath $spRootCertPath -InstallAccount $FarmAccount -Server $spTargetServer
+
+    # Check and establish ROOT trust
+    if ($currentValues.Ensure -eq 'Absent') {
+      try {
+        Set-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" -CertificateFilePath $spRootCertPath -InstallAccount $FarmAccount -Server $spTargetServer
+        Write-Output "Trust established with ROOT for $($spRemoteServer)."
+      }
+      catch {
+        Write-Error "Failed to establish ROOT trust for $($spRemoteServer): $_"
+      }
+    }
+    else {
+      Write-Verbose -Message "$($spRemoteServer)_ROOT already exists in TrustedRootAuthority"
+    }
+
+    # Check and establish STS trust if not a 'Content' service
+    if ($spServices -notcontains 'Content') {
+      $spSTSCertPath = "$($certFolder)\$($spRemoteServer)_STS.cer"
+      $currentValues = Get-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" -CertificateFilePath $spSTSCertPath -InstallAccount $FarmAccount -Server $spTargetServer
 
       if ($currentValues.Ensure -eq 'Absent') {
-        Set-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" `
-          -CertificateFilePath $spRootCertPath `
-          -InstallAccount $FarmAccount `
-          -Server $spTargetServer
+        try {
+          Set-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" -CertificateFilePath $spSTSCertPath -InstallAccount $FarmAccount -Server $spTargetServer
+          Write-Output "Trust established with STS for $($spRemoteServer)."
+        }
+        catch {
+          Write-Error "Failed to establish STS trust for $($spRemoteServer): $_"
+        }
       }
       else {
-        Write-Verbose -Message "$($spRemoteServer)_ROOT already exists in TrustedRootAuthority"
-      }
-      if ($spServices -notcontains 'Content' ) {
-        $spSTSCertPath = "$($certFolder)\$($spRemoteServer)_STS.cer"
-        $currentValues = Get-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" `
-          -CertificateFilePath $spSTSCertPath `
-          -InstallAccount $FarmAccount `
-          -Server $spTargetServer
-
-        if ($currentValues.Ensure -eq 'Absent') {
-          Set-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" `
-            -CertificateFilePath $spSTSCertPath `
-            -InstallAccount $FarmAccount `
-            -Server $spTargetServer
-        }
-        else {
-          Write-Verbose -Message "$($spRemoteServer)_STS already exists in TrustedServiceTokenIssuer"
-        }
+        Write-Verbose -Message "$($spRemoteServer)_STS already exists in TrustedServiceTokenIssuer"
       }
     }
+  }
 
-    # Publish Service Application
-    foreach ($spService in $spServices) {
-      if ($spService -ne 'Content') {
-        $currentValues = Get-SPSPublishedServiceApplication -Name $spService `
-          -Server $spTargetServer `
-          -InstallAccount $FarmAccount
-        Write-Verbose -Message "Getting uri of service $spService"
-        New-Variable -Name "$($spService)_URI" -Value $currentValues.Uri -Force
-        if ($currentValues.Ensure -eq 'Absent') {
-          Publish-SPSServiceApplication -Name $spService `
-            -Server $spTargetServer `
-            -InstallAccount $FarmAccount
+  # 2. On the publishing farm, publish the service application
+  foreach ($spService in $spServices) {
+    if ($spService -ne 'Content') {
+      $currentValues = Get-SPSPublishedServiceApplication -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+      Write-Verbose -Message "Getting URI of service $spService"
+
+      # Store the URI of the service in a variable
+      New-Variable -Name "$($spService)_URI" -Value $currentValues.Uri -Force
+
+      if ($currentValues.Ensure -eq 'Absent') {
+        Publish-SPSServiceApplication -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+      }
+      else {
+        Write-Verbose -Message "The service $($spService) is already Published"
+      }
+    }
+  }
+
+  # 3. On the publishing farm, set the permission to the appropriate service applications for the consuming farm.
+  foreach ($spService in $spServices) {
+    # Set permissions to Published Service Application
+    foreach ($spRemoteServer in $spRemoteServers) {
+      $spFarmID = Get-SPSFarmId -Server $spRemoteServer -InstallAccount $FarmAccount
+      $currentValues = Get-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+
+      # If permissions are not set, set them
+      if ($currentValues.Ensure -eq 'Absent') {
+        Set-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+      }
+      else {
+        Write-Verbose -Message "The Farm $($spRemoteServer) is already added in $($spService)"
+      }
+    }
+  }
+
+  # Set permissions to Application Discovery and Load Balancing Service Application
+  foreach ($spRemoteServer in $spRemoteServers) {
+    $spFarmID = Get-SPSFarmId -Server $spRemoteServer -InstallAccount $FarmAccount
+    $currentValues = Get-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" -Server $spTargetServer -InstallAccount $FarmAccount
+
+    # If permissions are not set, set them
+    if ($currentValues.Ensure -eq 'Absent') {
+      Set-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" -Server $spTargetServer -InstallAccount $FarmAccount
+    }
+    else {
+      Write-Verbose -Message "The Farm $($spRemoteServer) is already added in Application Discovery Permissions"
+    }
+  }
+
+  # Connect each published service application on remote farm
+  foreach ($spService in $spServices) {
+    if ($spService -ne 'Content') {
+      $spServicePublishedUri = Get-Variable -Name "$($spService)_URI"
+      foreach ($spRemoteServer in $spRemoteServers) {
+        $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spRemoteServer }
+        $spTargetServer = ($spServer.Server) + '.' + "$($scriptFQDN)"
+
+        # If CleanServices switch is enabled, remove existing service app proxy
+        if ($CleanServices) {
+          Remove-SPSPublishedServiceAppProxy -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
         }
         else {
-          Write-Verbose -Message "The service $($spService) is already Published"
-        }
-        # Set permissions to Published Service Application
-        foreach ($spRemoteServer in $spRemoteServers) {
-          $spFarmID = Get-Variable -Name "$($spRemoteServer)_FarmId"
-          $currentValues = Get-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" `
-            -Name $spService `
-            -Server $spTargetServer `
-            -InstallAccount $FarmAccount
+          $currentValues = Get-SPSPublishedServiceAppProxy -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+
+          # If the service app proxy is not present, create a new one
           if ($currentValues.Ensure -eq 'Absent') {
-            Set-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" `
-              -Name $spService `
-              -Server $spTargetServer `
-              -InstallAccount $FarmAccount
+            New-SPSPublishedServiceAppProxy -Name $spService -Server $spTargetServer -ServiceUri $spServicePublishedUri.value -InstallAccount $FarmAccount
           }
           else {
-            Write-Verbose -Message "The Farm $($spRemoteServer) is already added in $($spService)"
-          }
-        }
-      }
-    }
-
-    # Set permissions to Application Discovery and Load Balancing Service Application
-    foreach ($spRemoteServer in $spRemoteServers) {
-      $spFarmID = Get-Variable -Name "$($spRemoteServer)_FarmId"
-      $currentValues = Get-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" `
-        -Server $spTargetServer `
-        -InstallAccount $FarmAccount
-      if ($currentValues.Ensure -eq 'Absent') {
-        Set-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" `
-          -Server $spTargetServer `
-          -InstallAccount $FarmAccount
-      }
-      else {
-        Write-Verbose -Message "The Farm $($spRemoteServer) is already added in Application Discovery Permissions"
-      }
-    }
-
-    # Connect each published service application on remote farm
-    foreach ($spService in $spServices) {
-      if ($spService -ne 'Content') {
-        $spServicePublishedUri = Get-Variable -Name "$($spService)_URI"
-
-        foreach ($spRemoteServer in $spRemoteServers) {
-          $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spRemoteServer }
-          $spTargetServer = ($spServer.Server) + '.' + "$($scriptFQDN)"
-
-          if ($CleanServices) {
-            Remove-SPSPublishedServiceAppProxy -Name $spService `
-              -Server $spTargetServer `
-              -InstallAccount $FarmAccount
-          }
-          else {
-            $currentValues = Get-SPSPublishedServiceAppProxy -Name $spService `
-              -Server $spTargetServer `
-              -InstallAccount $FarmAccount
-
-            if ($currentValues.Ensure -eq 'Absent') {
-              New-SPSPublishedServiceAppProxy -Name $spService `
-                -Server $spTargetServer `
-                -ServiceUri $spServicePublishedUri.value `
-                -InstallAccount $FarmAccount
-            }
-            else {
-              Write-Verbose -Message "The Service Application Proxy $($spService) is already added in Farm $($spRemoteServer)"
-            }
+            Write-Verbose -Message "The Service Application Proxy $($spService) is already added in Farm $($spRemoteServer)"
           }
         }
       }
     }
   }
-  Trap { Continue }
-
-  $DateEnded = Get-date
-  Write-Output '-----------------------------------------------'
-  Write-Output "| Automated Script - Configuration Trust |"
-  Write-Output "| Started on       - $DateStarted |"
-  Write-Output "| Completed on     - $DateEnded |"
-  Write-Output '-----------------------------------------------'
-  Stop-Transcript
-  Remove-Variable * -ErrorAction SilentlyContinue;
-  Remove-Module *;
-  $error.Clear();
-  Exit
-  #endregion
 }
+#endregion
+
+# Clean-Up
+Trap { Continue }
+$DateEnded = Get-Date
+Write-Output '-----------------------------------------------'
+Write-Output "| SPSTrust Script Completed                   |"
+Write-Output "| Started on  - $DateStarted                  |"
+Write-Output "| Ended on    - $DateEnded                    |"
+Write-Output '-----------------------------------------------'
+Stop-Transcript
+Remove-Variable * -ErrorAction SilentlyContinue
+Remove-Module * -ErrorAction SilentlyContinue
+$error.Clear()
+Exit

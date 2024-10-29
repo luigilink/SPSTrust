@@ -7,7 +7,7 @@
 
 ## Description
 
-SPSTrust is a PowerShell script tool to configure trust Farm in your SharePoint environment.
+SPSTrust is a PowerShell script tool to configure trust Farm in your SharePoint environment. The script follows the documentation: [Share service applications across farms in SharePoint Server](https://learn.microsoft.com/en-us/sharepoint/administration/share-service-applications-across-farms).
 
 It's compatible with all supported versions for SharePoint OnPremises (2016 to Subscription Edition).
 
