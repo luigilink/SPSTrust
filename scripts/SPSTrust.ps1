@@ -122,12 +122,35 @@ foreach ($spFarm in $spFarmsObj) {
   $spSTSCertPath = "$($certFolder)\$($spFarm.Name)_STS.cer"
   $spTargetServer = "$($spFarm.Server).$scriptFQDN"
 
-  try {
-    # If CleanServices switch is enabled, remove existing ROOT certificate
-    if ($CleanServices) {
-      # WRITE CODE HERE REMOVE File in file shared
+  # If CleanServices switch is enabled, remove existing ROOT and STS certificates
+  if ($CleanServices) {
+    # WRITE CODE HERE REMOVE File in file shared
+    try {
+      # Check if the ROOT certificate already exists; if not, delete it
+      if (Test-Path -Path $spRootCertPath) {
+        # Remove the file
+        Remove-Item -Path $spRootCertPath -Force
+        Write-Output "File '$spRootCertPath' has been removed from the shared folder."
+      }
+      else {
+        Write-Output "File '$spRootCertPath' does not exist in the shared folder."
+      }
+      # Check if the STS certificate already exists; if not, delete it
+      if (Test-Path -Path $spSTSCertPath) {
+        # Remove the file
+        Remove-Item -Path $spSTSCertPath -Force
+        Write-Output "File '$spSTSCertPath' has been removed from the shared folder."
+      }
+      else {
+        Write-Output "File '$spSTSCertPath' does not exist in the shared folder."
+      }
     }
-    else {
+    catch {
+      Write-Error "Failed to remove certificates for $($spFarm.Name): $_"
+    }
+  }
+  else {
+    try {
       # Check if the ROOT certificate already exists; if not, export it
       if (-Not (Test-Path $spRootCertPath)) {
         Export-SPSTrustedRootAuthority -Name $spFarm.Name -Server $spTargetServer -InstallAccount $FarmAccount -CertificateFilePath $certFolder
@@ -137,17 +160,11 @@ foreach ($spFarm in $spFarmsObj) {
         Write-Output "ROOT certificate for $($spFarm.Name) already exists."
       }
     }
-  }
-  catch {
-    Write-Error "Failed to export ROOT certificate for $($spFarm.Name): $_"
-  }  
+    catch {
+      Write-Error "Failed to export ROOT certificate for $($spFarm.Name): $_"
+    }  
 
-  try {
-    # If CleanServices switch is enabled, remove existing STS certificate
-    if ($CleanServices) {
-      # WRITE CODE HERE REMOVE File in file shared
-    }
-    else {
+    try {
       # Check if the STS certificate already exists; if not, export it
       if (-Not (Test-Path $spSTSCertPath)) {
         Export-SPSSecurityTokenCertificate -Name $spFarm.Name -Server $spTargetServer -InstallAccount $FarmAccount -CertificateFilePath $certFolder
@@ -157,9 +174,9 @@ foreach ($spFarm in $spFarmsObj) {
         Write-Output "STS certificate for $($spFarm.Name) already exists."
       }
     }
-  }
-  catch {
-    Write-Error "Failed to export STS certificate for $($spFarm.Name): $_"
+    catch {
+      Write-Error "Failed to export STS certificate for $($spFarm.Name): $_"
+    }
   }
 }
 
@@ -171,41 +188,92 @@ foreach ($spTrust in $spTrustsObj) {
   $spServices = $spTrust.Services
 
   foreach ($spRemoteServer in $spRemoteServers) {
+    # Get existing ROOT and STS Trust before making changes
     $spRootCertPath = "$($certFolder)\$($spRemoteServer)_ROOT.cer"
-    $currentValues = Get-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" -CertificateFilePath $spRootCertPath -InstallAccount $FarmAccount -Server $spTargetServer
-
-    # Check and establish ROOT trust
-    if ($currentValues.Ensure -eq 'Absent') {
-      try {
-        Set-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" -CertificateFilePath $spRootCertPath -InstallAccount $FarmAccount -Server $spTargetServer
-        Write-Output "Trust established with ROOT for $($spRemoteServer)."
-      }
-      catch {
-        Write-Error "Failed to establish ROOT trust for $($spRemoteServer): $_"
-      }
+    $spSTSCertPath = "$($certFolder)\$($spRemoteServer)_STS.cer"
+    try {
+      # Retrieve the existing ROOT certificate
+      $getSPTrustedRootCert = Get-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" -CertificateFilePath $spRootCertPath -InstallAccount $FarmAccount -Server $spTargetServer
+      # Retrieve the existing STS certificate
+      $getSPTrustedSTSCert = Get-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" -CertificateFilePath $spSTSCertPath -InstallAccount $FarmAccount -Server $spTargetServer
     }
-    else {
-      Write-Verbose -Message "$($spRemoteServer)_ROOT already exists in TrustedRootAuthority"
+    catch {
+      # Handle errors during retrieval of ROOT and STS certificates
+      Write-Error "Failed to get ROOT | STS trust for $($spRemoteServer): $_"
     }
-
-    # Check and establish STS trust if not a 'Content' service
-    if ($spServices -notcontains 'Content') {
-      $spSTSCertPath = "$($certFolder)\$($spRemoteServer)_STS.cer"
-      $currentValues = Get-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" -CertificateFilePath $spSTSCertPath -InstallAccount $FarmAccount -Server $spTargetServer
-
-      if ($currentValues.Ensure -eq 'Absent') {
+    
+    # If CleanServices switch is enabled, remove existing ROOT and STS certificates
+    if ($CleanServices) {
+      # Check and remove ROOT trust if needed
+      if ($getSPTrustedRootCert.Ensure -eq 'Present') {
         try {
-          Set-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" -CertificateFilePath $spSTSCertPath -InstallAccount $FarmAccount -Server $spTargetServer
-          Write-Output "Trust established with STS for $($spRemoteServer)."
+          # Remove the existing ROOT trust
+          Set-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" -InstallAccount $FarmAccount -Server $spTargetServer -Ensure 'Absent'
+          Write-Output "Trust established with ROOT removed for $($spRemoteServer)."
         }
         catch {
-          Write-Error "Failed to establish STS trust for $($spRemoteServer): $_"
+          # Handle errors during removal of ROOT trust
+          Write-Error "Failed to remove ROOT trust for $($spRemoteServer): $_"
         }
       }
       else {
-        Write-Verbose -Message "$($spRemoteServer)_STS already exists in TrustedServiceTokenIssuer"
+        # Log if ROOT trust is not present
+        Write-Verbose -Message "$($spRemoteServer)_ROOT not present in TrustedRootAuthority"
+      }
+      # Check and remove STS trust if needed
+      if ($getSPTrustedSTSCert.Ensure -eq 'Present') {
+        try {
+          # Remove the existing STS trust
+          Set-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" -InstallAccount $FarmAccount -Server $spTargetServer -Ensure 'Absent'
+          Write-Output "Trust established with STS removed for $($spRemoteServer)."
+        }
+        catch {
+          # Handle errors during removal of STS trust
+          Write-Error "Failed to remove STS trust for $($spRemoteServer): $_"
+        }
+      }
+      else {
+        # Log if STS trust is not present
+        Write-Verbose -Message "$($spRemoteServer)_STS not present in TrustedServiceTokenIssuer"
       }
     }
+    else {
+      # Check and establish ROOT trust
+      if ($getSPTrustedRootCert.Ensure -eq 'Absent') {
+        try {
+          # Establish the ROOT trust
+          Set-SPSTrustedRootAuthority -Name "$($spRemoteServer)_ROOT" -CertificateFilePath $spRootCertPath -InstallAccount $FarmAccount -Server $spTargetServer
+          Write-Output "Trust established with ROOT for $($spRemoteServer)."
+        }
+        catch {
+          # Handle errors during establishment of ROOT trust
+          Write-Error "Failed to establish ROOT trust for $($spRemoteServer): $_"
+        }
+      }
+      else {
+        # Log if ROOT trust already exists
+        Write-Verbose -Message "$($spRemoteServer)_ROOT already exists in TrustedRootAuthority"
+      }
+    
+      # Check and establish STS trust if not a 'Content' service
+      if ($spServices -notcontains 'Content') {
+        if ($getSPTrustedSTSCert.Ensure -eq 'Absent') {
+          try {
+            # Establish the STS trust
+            Set-SPSTrustedServiceTokenIssuer -Name "$($spRemoteServer)_STS" -CertificateFilePath $spSTSCertPath -InstallAccount $FarmAccount -Server $spTargetServer
+            Write-Output "Trust established with STS for $($spRemoteServer)."
+          }
+          catch {
+            # Handle errors during establishment of STS trust
+            Write-Error "Failed to establish STS trust for $($spRemoteServer): $_"
+          }
+        }
+        else {
+          # Log if STS trust already exists
+          Write-Verbose -Message "$($spRemoteServer)_STS already exists in TrustedServiceTokenIssuer"
+        }
+      }
+    }    
   }
 
   # 2. On the publishing farm, publish the service application
