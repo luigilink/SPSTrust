@@ -320,8 +320,62 @@ foreach ($spTrust in $spTrustsObj) {
   }
 
   # 3. On the publishing farm, set the permission to the appropriate service applications for the consuming farm.
+  # 3.1 Set permissions to Application Discovery and Load Balancing Service Application
+  foreach ($spRemoteServer in $spRemoteServers) {
+    # Get the Farm ID for the remote server
+    $spFarmID = Get-SPSFarmId -Server $spRemoteServer -InstallAccount $FarmAccount
+
+    # Get the current permissions for the Farm ID on the target server
+    $currentValues = Get-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" -Server $spTargetServer -InstallAccount $FarmAccount
+
+    # If the CleanServices switch is enabled, Revoke permissions of Application Discovery and Load Balancing Service Application
+    if ($CleanServices) {
+      if ($currentValues.Ensure -eq 'Present') {
+        try {
+          # Revoke permissions added in Application Discovery and Load Balancing Service Application
+          Set-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" -Server $spTargetServer -InstallAccount $FarmAccount -Ensure 'Absent'
+        }
+        catch {
+          Write-Error -Message @"
+Target Server: $($spTargetServer)
+Service Application: 'Application Discovery and Load Balancing Service Application'
+Failed to revoke permissions for Farm: $($spRemoteServer)
+Exception: $_
+"@
+        }
+      }
+      else {
+        Write-Verbose -Message @"
+The Farm $($spRemoteServer) is already revoked in Application Discovery Permissions.
+Please verify the settings and ensure that all configurations are correct.
+"@
+      }
+    }
+    else {
+      try {
+        # If permissions are not set, set them
+        if ($currentValues.Ensure -eq 'Absent') {
+          Set-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" -Server $spTargetServer -InstallAccount $FarmAccount
+        }
+        else {
+          Write-Verbose -Message @"
+The Farm $($spRemoteServer) is already granted in Application Discovery Permissions.
+Please verify the settings and ensure that all configurations are correct.
+"@
+        }
+      }
+      catch {
+        Write-Error -Message @"
+Target Server: $($spTargetServer)
+Service Application: 'Application Discovery and Load Balancing Service Application'
+Failed to grant permissions for Farm: $($spRemoteServer)
+Exception: $_
+"@
+      }
+    }
+  }
+  # 3.2 Set permission to a published service application for a consuming farm
   foreach ($spService in $spServices) {
-    # Set permissions to Published Service Application
     foreach ($spRemoteServer in $spRemoteServers) {
       $spFarmID = Get-SPSFarmId -Server $spRemoteServer -InstallAccount $FarmAccount
       $currentValues = Get-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
@@ -333,20 +387,6 @@ foreach ($spTrust in $spTrustsObj) {
       else {
         Write-Verbose -Message "The Farm $($spRemoteServer) is already added in $($spService)"
       }
-    }
-  }
-
-  # Set permissions to Application Discovery and Load Balancing Service Application
-  foreach ($spRemoteServer in $spRemoteServers) {
-    $spFarmID = Get-SPSFarmId -Server $spRemoteServer -InstallAccount $FarmAccount
-    $currentValues = Get-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" -Server $spTargetServer -InstallAccount $FarmAccount
-
-    # If permissions are not set, set them
-    if ($currentValues.Ensure -eq 'Absent') {
-      Set-SPSTopologyServiceAppPermission -FarmId "$($spFarmID.Value)" -Server $spTargetServer -InstallAccount $FarmAccount
-    }
-    else {
-      Write-Verbose -Message "The Farm $($spRemoteServer) is already added in Application Discovery Permissions"
     }
   }
 

@@ -34,4 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Update parameter description
   - Add [ValidateScript({ Test-Path $_ -and $_ -like '*.json' })] in ConfigFile parameter
   - Add missing comments
-  - Add CleanServices for publish the service application section
+  - Add CleanServices :
+    - Publish the service application section
+    - Permissions on Application Discovery and Load Balancing Service Application
