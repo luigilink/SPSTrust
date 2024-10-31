@@ -3,7 +3,7 @@
 The format is based on and uses the types of changes according to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2023-10-29
+## [Unreleased] - 2023-10-31
 
 ### Added
 
@@ -34,3 +34,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Update parameter description
   - Add [ValidateScript({ Test-Path $_ -and $_ -like '*.json' })] in ConfigFile parameter
   - Add missing comments
+  - Add CleanServices for publish the service application section

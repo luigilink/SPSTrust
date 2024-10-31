@@ -116,7 +116,7 @@ Write-Verbose -Message "Setting power management plan to 'High Performance'..."
 Start-Process -FilePath "$env:SystemRoot\system32\powercfg.exe" -ArgumentList '/s 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c' -NoNewWindow
 
 # 1. Exchange trust certificates between the farms
-# Export STS and ROOT certificates for each Farm
+# 1.1 Export STS and ROOT certificates for each Farm
 foreach ($spFarm in $spFarmsObj) {
   $spRootCertPath = "$($certFolder)\$($spFarm.Name)_ROOT.cer"
   $spSTSCertPath = "$($certFolder)\$($spFarm.Name)_STS.cer"
@@ -162,7 +162,7 @@ foreach ($spFarm in $spFarmsObj) {
     }
     catch {
       Write-Error "Failed to export ROOT certificate for $($spFarm.Name): $_"
-    }  
+    }
 
     try {
       # Check if the STS certificate already exists; if not, export it
@@ -180,13 +180,13 @@ foreach ($spFarm in $spFarmsObj) {
   }
 }
 
-# Establish trust on the publishing farm - Import STS and ROOT certificates
 foreach ($spTrust in $spTrustsObj) {
   $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
   $spTargetServer = "$($spServer.Server).$($scriptFQDN)"
   $spRemoteServers = $spTrust.RemoteFarms
   $spServices = $spTrust.Services
 
+  # 1.2 Establish trust on the publishing farm - Import STS and ROOT certificates
   foreach ($spRemoteServer in $spRemoteServers) {
     # Get existing ROOT and STS Trust before making changes
     $spRootCertPath = "$($certFolder)\$($spRemoteServer)_ROOT.cer"
@@ -201,7 +201,7 @@ foreach ($spTrust in $spTrustsObj) {
       # Handle errors during retrieval of ROOT and STS certificates
       Write-Error "Failed to get ROOT | STS trust for $($spRemoteServer): $_"
     }
-    
+
     # If CleanServices switch is enabled, remove existing ROOT and STS certificates
     if ($CleanServices) {
       # Check and remove ROOT trust if needed
@@ -254,7 +254,7 @@ foreach ($spTrust in $spTrustsObj) {
         # Log if ROOT trust already exists
         Write-Verbose -Message "$($spRemoteServer)_ROOT already exists in TrustedRootAuthority"
       }
-    
+
       # Check and establish STS trust if not a 'Content' service
       if ($spServices -notcontains 'Content') {
         if ($getSPTrustedSTSCert.Ensure -eq 'Absent') {
@@ -273,23 +273,48 @@ foreach ($spTrust in $spTrustsObj) {
           Write-Verbose -Message "$($spRemoteServer)_STS already exists in TrustedServiceTokenIssuer"
         }
       }
-    }    
+    }
   }
 
   # 2. On the publishing farm, publish the service application
   foreach ($spService in $spServices) {
+    # Skip the 'Content' service
     if ($spService -ne 'Content') {
+      # Get the current values of the service application
       $currentValues = Get-SPSPublishedServiceApplication -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
       Write-Verbose -Message "Getting URI of service $spService"
 
       # Store the URI of the service in a variable
       New-Variable -Name "$($spService)_URI" -Value $currentValues.Uri -Force
 
-      if ($currentValues.Ensure -eq 'Absent') {
-        Publish-SPSServiceApplication -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+      # If CleanServices switch is enabled, disable the publishing of the service application
+      if ($CleanServices) {
+        if ($currentValues.Ensure -eq 'Present') {
+          try {
+            # Unpublish the service application
+            Publish-SPSServiceApplication -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount -Ensure 'Absent'
+          }
+          catch {
+            Write-Error "Failed to unpublish the service $($spService) for $($spTargetServer): $_"
+          }
+        }
+        else {
+          Write-Verbose -Message "The service $($spService) is already Unpublished for server $($spTargetServer)"
+        }
       }
       else {
-        Write-Verbose -Message "The service $($spService) is already Published"
+        if ($currentValues.Ensure -eq 'Absent') {
+          try {
+            # Publish the service application
+            Publish-SPSServiceApplication -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+          }
+          catch {
+            Write-Error "Failed to publish the service $($spService) for $($spTargetServer): $_"
+          }
+        }
+        else {
+          Write-Verbose -Message "The service $($spService) is already Published for server $($spTargetServer)"
+        }
       }
     }
   }

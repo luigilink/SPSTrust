@@ -614,9 +614,14 @@ function Publish-SPSServiceApplication {
     [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
-    $InstallAccount
+    $InstallAccount,
+
+    [Parameter()]
+    [ValidateSet('Present', 'Absent')]
+    [System.String]
+    $Ensure = 'Present'
   )
 
   Write-Verbose -Message "Setting service application publish status '$Name'"
@@ -638,13 +643,19 @@ function Publish-SPSServiceApplication {
       throw $message
     }
 
-    Write-Verbose -Message "Publishing Service Application $($params.Name)"
-    if ($serviceApp.DefaultEndpoint.DisplayName -eq 'http') {
-      $httpsEndpoint = $serviceApp.Endpoints | Where-Object -FilterScript { $_.DisplayName -eq 'https' }
-      Set-SPServiceApplication $serviceApp -DefaultEndpoint $httpsEndpoint -Confirm:$false -Verbose
+    if ($params.Ensure -eq 'Present') {
+      Write-Verbose -Message "Publishing Service Application $($params.Name)"
+      if ($serviceApp.DefaultEndpoint.DisplayName -eq 'http') {
+        $httpsEndpoint = $serviceApp.Endpoints | Where-Object -FilterScript { $_.DisplayName -eq 'https' }
+        Set-SPServiceApplication $serviceApp -DefaultEndpoint $httpsEndpoint -Confirm:$false -Verbose
+      }
+      Publish-SPServiceApplication -Identity $serviceApp -Verbose
     }
 
-    Publish-SPServiceApplication -Identity $serviceApp -Verbose
+    if ($params.Ensure -eq 'Absent') {
+      Write-Verbose -Message "Unpublishing Service Application $($params.Name)"
+      Unpublish-SPServiceApplication  -Identity $serviceApp -Verbose
+    }
   }
 }
 function Get-SPSTopologyServiceAppPermission {
