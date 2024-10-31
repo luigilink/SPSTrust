@@ -377,15 +377,55 @@ Exception: $_
   # 3.2 Set permission to a published service application for a consuming farm
   foreach ($spService in $spServices) {
     foreach ($spRemoteServer in $spRemoteServers) {
+      # Get the Farm ID for the remote server
       $spFarmID = Get-SPSFarmId -Server $spRemoteServer -InstallAccount $FarmAccount
-      $currentValues = Get-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
 
-      # If permissions are not set, set them
-      if ($currentValues.Ensure -eq 'Absent') {
-        Set-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+      # Get the current permissions for the Farm ID on the service application
+      $currentValues = Get-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+      # If the CleanServices switch is enabled, Revoke permissions of Desired Service Application
+      if ($CleanServices) {
+        if ($currentValues.Ensure -eq 'Present') {
+          try {
+            # Revoke permissions added in Application Discovery and Load Balancing Service Application
+            Set-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount -Ensure 'Absent'
+          }
+          catch {
+            Write-Error -Message @"
+Target Server: $($spTargetServer)
+Service Application: $($spService)
+Failed to revoke permissions for Farm: $($spRemoteServer)
+Exception: $_
+"@
+          }
+        }
+        else {
+          Write-Verbose -Message @"
+The Farm $($spRemoteServer) is already revoked for service '$($spService)'.
+Please verify the settings and ensure that all configurations are correct.
+"@
+        }
       }
       else {
-        Write-Verbose -Message "The Farm $($spRemoteServer) is already added in $($spService)"
+        # If permissions are not set, set them
+        try {
+          if ($currentValues.Ensure -eq 'Absent') {
+            Set-SPSPublishedServiceAppPermission -FarmId "$($spFarmID.Value)" -Name $spService -Server $spTargetServer -InstallAccount $FarmAccount
+          }
+          else {
+            Write-Verbose -Message @"
+The Farm $($spRemoteServer) is already granted for service '$($spService)'.
+Please verify the settings and ensure that all configurations are correct.
+"@
+          }
+        }
+        catch {
+          Write-Error -Message @"
+Target Server: $($spTargetServer)
+Service Application: $($spService)
+Failed to grant permissions for Farm: $($spRemoteServer)
+Exception: $_
+"@
+        }
       }
     }
   }

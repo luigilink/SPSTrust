@@ -847,9 +847,15 @@ function Set-SPSPublishedServiceAppPermission {
     [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
-    $InstallAccount
+    $InstallAccount,
+
+    # Ensure parameter to specify whether to add (Present) or remove (Absent) permissions
+    [Parameter()]
+    [ValidateSet('Present', 'Absent')]
+    [System.String]
+    $Ensure = 'Present'
   )
 
   Write-Verbose -Message "Setting Topology Service permissions for FarmID '$FarmId'"
@@ -884,12 +890,20 @@ function Set-SPSPublishedServiceAppPermission {
         -ClaimProvider $claimProvider `
         -ClaimValue $($params.FarmId)
 
+      # Grant or revoke permissions based on the Ensure parameter
+      if ($params.Ensure -eq 'Present') {
+        Grant-SPObjectSecurity -Identity $security `
+          -Principal $principal `
+          -Rights $spoRights `
+          -Verbose
+      }
+      elseif ($params.Ensure -eq 'Absent') {
+        Revoke-SPObjectSecurity -Identity $security `
+          -Principal $principal `
+          -Verbose
+      }
 
-      Grant-SPObjectSecurity -Identity $security `
-        -Principal $principal `
-        -Rights $spoRights `
-        -Verbose
-
+      # Apply the updated security settings to the Targeted Service Application
       Set-SPServiceApplicationSecurity $serviceApp -ObjectSecurity $security -Verbose
     }
   }

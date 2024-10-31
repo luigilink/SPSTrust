@@ -37,3 +37,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Add CleanServices :
     - Publish the service application section
     - Permissions on Application Discovery and Load Balancing Service Application
+    - Permission to a published service application for a consuming farm
