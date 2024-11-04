@@ -1,6 +1,7 @@
 #region Import Modules
 # Import the custom module 'sps.util.psm1' from the script's directory
-Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'sps.util.psm1') -Force
+$scriptModulePath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+Import-Module -Name (Join-Path -Path $scriptModulePath -ChildPath 'sps.util.psm1') -Force
 #endregion
 
 function Invoke-SPSCommand {
@@ -27,7 +28,7 @@ function Invoke-SPSCommand {
         Add-PSSnapin Microsoft.SharePoint.PowerShell
     }
 "@
-    
+
     $invokeArgs = @{
         ScriptBlock = [ScriptBlock]::Create($baseScript + $ScriptBlock.ToString())
     }
@@ -50,7 +51,7 @@ function Invoke-SPSCommand {
             -Name "Microsoft.SharePoint.PSSession" `
             -SessionOption (New-PSSessionOption -OperationTimeout 0 -IdleTimeout 60000) `
             -ErrorAction Continue
-        
+
         # Add the session to the invocation arguments if the session is created successfully
         if ($session) {
             $invokeArgs.Add("Session", $session)

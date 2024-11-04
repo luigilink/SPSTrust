@@ -7,7 +7,7 @@ function Get-SPSFarmId {
     [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -42,7 +42,7 @@ function Get-SPSTrustedRootAuthority {
     [System.String]
     $CertificateFilePath,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -210,7 +210,7 @@ function Get-SPSTrustedServiceTokenIssuer {
     [System.String]
     $CertificateFilePath,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -373,7 +373,7 @@ function Export-SPSTrustedRootAuthority {
     [String]
     $CertificateFilePath,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -415,7 +415,7 @@ function Get-SPSPublishedServiceApplication {
     [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -450,6 +450,7 @@ function Get-SPSPublishedServiceApplication {
       Name   = $params.Name
       Ensure = $sharedEnsure
       Uri    = $serviceApp.Uri.tostring()
+      Type   = $serviceApp.GetType().FullName
     }
   }
   return $result
@@ -467,7 +468,7 @@ function Get-SPSPublishedServiceAppProxy {
     [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -514,9 +515,13 @@ function New-SPSPublishedServiceAppProxy {
 
     [Parameter(Mandatory = $true)]
     [System.String]
+    $ServiceType,
+
+    [Parameter(Mandatory = $true)]
+    [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -528,22 +533,21 @@ function New-SPSPublishedServiceAppProxy {
     -ScriptBlock {
     $params = $args[0]
 
-
     Receive-SPServiceApplicationConnectionInfo -FarmUrl $params.ServiceUri | Out-Null
 
-    switch ($params.Name) {
-      { $_.contains('SCH') } {
+    switch ($params.ServiceType) {
+      { $_.contains('SearchServiceApplication') } {
         New-SPEnterpriseSearchServiceApplicationProxy -Name $params.Name `
           -Uri $params.ServiceUri `
           -Verbose
       }
-      { $_.contains('UPS') } {
+      { $_.contains('UserProfileApplication') } {
         New-SPProfileServiceApplicationProxy -Name $params.Name `
           -Uri $params.ServiceUri `
           -DefaultProxyGroup `
           -Verbose
       }
-      { $_.contains('DAT') } {
+      { $_.contains('MetadataWebServiceApplication') } {
         New-SPMetadataServiceApplicationProxy -Name $params.Name `
           -Uri $params.ServiceUri `
           -DefaultProxyGroup `
@@ -554,8 +558,14 @@ function New-SPSPublishedServiceAppProxy {
         $mmsProxy.Properties.IsDefaultKeywordTaxonomy = $true
         $mmsProxy.Update()
       }
-      { $_.contains('SSA') } {
+      { $_.contains('SPSecurityTokenServiceApplication') } {
         New-SPSecureStoreServiceApplicationProxy -Name $params.Name `
+          -Uri $params.ServiceUri `
+          -DefaultProxyGroup `
+          -Verbose
+      }
+      { $_.contains('TranslationServiceApplication') } {
+        New-SPTranslationServiceApplicationProxy -Name $params.Name `
           -Uri $params.ServiceUri `
           -DefaultProxyGroup `
           -Verbose
@@ -575,7 +585,7 @@ function Remove-SPSPublishedServiceAppProxy {
     [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -671,7 +681,7 @@ function Get-SPSTopologyServiceAppPermission {
     [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -785,7 +795,7 @@ function Get-SPSPublishedServiceAppPermission {
     [System.String]
     $Server,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
@@ -924,7 +934,7 @@ function Export-SPSSecurityTokenCertificate {
     [String]
     $CertificateFilePath,
 
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
     [System.Management.Automation.PSCredential]
     $InstallAccount
   )
