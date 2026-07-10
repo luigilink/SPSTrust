@@ -3,6 +3,40 @@
 The format is based on and uses the types of changes according to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-07-10
+
+### Added
+
+- Read-only **trust matrix** reporting:
+  - `Get-SPSTrustStatus` (public) — collects the current cross-farm trust state
+    (ROOT, STS, Published, Topology permission, SA permission, Proxy) by calling only
+    the read-only `Get-SPS*` functions. Never changes anything; `Content` services are
+    reported as N/A for STS/Published/SA-permission/Proxy; getter failures are captured
+    as `Error` with a per-row note instead of aborting the audit.
+  - `Export-SPSTrustReport` (public) — renders a status object (`-Status`) or a results
+    JSON file (`-InputFile`) into a self-contained, offline HTML report with summary
+    cards and an interactive (search + click-to-sort) trust matrix.
+  - `Backup-SPSJsonFile` (public) — archives the previous results JSON before overwrite.
+  - Private HTML report helpers: `ConvertTo-SPSHtmlEncoded`, `Get-SPSReportHtmlHead`,
+    `Get-SPSReportCardHtml`, `Get-SPSReportHtmlScript`.
+- `SPSTrust.ps1`:
+  - `-ReportOnly` switch — read-only audit that skips all four configuration stages and
+    only collects state and writes the report.
+  - `-HistoryRetentionDays` parameter (default 30) — rotation of archived result
+    snapshots in `Results\history\`.
+  - A post-run reporting stage (runs after both a normal/clean run and a `-ReportOnly`
+    audit): writes `Results\<Application>-<Environment>.json` and
+    `Reports\<Application>-<Environment>.html`, archiving the previous snapshot and
+    pruning history first.
+- Wiki: new `Reports.md` (trust matrix, output layout, regeneration) linked from the
+  sidebar; Home and Usage updated for the new parameters and outputs.
+- Tests for the collector, the renderer, `Backup-SPSJsonFile`, and the script report
+  wiring.
+
+### Changed
+
+- `.gitignore` now excludes the runtime `Logs/`, `Results/` and `Reports/` folders.
+
 ## [2.0.0] - 2026-07-10
 
 ### Added

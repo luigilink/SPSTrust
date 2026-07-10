@@ -1,36 +1,33 @@
 # SPSTrust - Release Notes
 
-## [2.0.0] - 2026-07-10
+## [2.1.0] - 2026-07-10
 
-> [!IMPORTANT]
-> This is a major release with breaking changes. The package layout moved from
-> `scripts/` to `src/`, and the configuration format changed from JSON to a PowerShell
-> data file (`.psd1`). Convert your JSON configuration to the equivalent `.psd1` hashtable
-> (see the [Configuration](https://github.com/luigilink/SPSTrust/wiki/Configuration) wiki
-> page) before upgrading.
+This release adds a read-only **trust matrix** report, produced both at the end of a
+normal run and in a new dedicated audit mode. It is fully backward compatible with 2.0.0.
 
 ### Added
 
-- New reusable `SPSTrust.Common` module (Public/Private layout, manifest-driven version).
-- `-LogRetentionDays` parameter with automatic transcript log rotation.
-- Example `.psd1` configuration, Pester test suite, PSScriptAnalyzer settings, and a
-  Pester CI workflow.
-- Wiki sidebar and Release Process page.
+- **`-ReportOnly`** — read-only audit mode: skips all configuration stages and only
+  collects the current trust state and writes the report (changes nothing).
+- **Trust matrix report** — every run now writes a JSON snapshot
+  (`Results\<Application>-<Environment>.json`) and a self-contained, offline HTML report
+  (`Reports\<Application>-<Environment>.html`) showing, per publishing-farm /
+  consuming-farm / service, the state of each trust dimension (ROOT, STS, Published,
+  Topology permission, SA permission, Proxy) as Present / Absent / N/A / Error.
+- New public functions in `SPSTrust.Common`: `Get-SPSTrustStatus` (read-only collector),
+  `Export-SPSTrustReport` (HTML renderer, also usable standalone via `-InputFile`) and
+  `Backup-SPSJsonFile`.
+- **`-HistoryRetentionDays`** (default 30) — rotation of archived result snapshots in
+  `Results\history\`.
+- Wiki: new **Reports & Audit** page.
 
 ### Changed
 
-- **BREAKING**: `scripts/` → `src/`; release archives extract to `SPSTrust.ps1` + `Modules/`.
-- **BREAKING**: configuration is now a `.psd1` data file loaded with `Import-PowerShellDataFile`.
-- Script version sourced from the module manifest.
-- Workflows bumped (`checkout@v7`, `action-gh-release@v3`); README trimmed to defer to the wiki.
+- `.gitignore` excludes the runtime `Logs/`, `Results/` and `Reports/` folders.
 
-### Fixed
+### Compatibility
 
-- Wiki `Usage` examples (wrong script name and a missing mandatory `-FarmAccount`).
-
-### Removed
-
-- `scripts/` folder, the monolithic `sps.util.psm1` / `util.psm1` modules, and the unused
-  `Clear-SPSLog` helper.
+- No breaking changes. Existing `-ConfigFile` / `-FarmAccount` / `-CleanServices` usage is
+  unchanged; the reporting stage is additive and read-only.
 
 A full list of changes in each version can be found in the [change log](CHANGELOG.md).

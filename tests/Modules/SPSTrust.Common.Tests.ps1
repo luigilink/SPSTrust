@@ -66,9 +66,11 @@ Describe 'SPSTrust.Common Module' {
 Describe 'SPSTrust.Common Public Functions' {
 
     $publicFunctions = @(
+        'Backup-SPSJsonFile',
         'Clear-SPSLogFolder',
         'Export-SPSSecurityTokenCertificate',
         'Export-SPSTrustedRootAuthority',
+        'Export-SPSTrustReport',
         'Get-SPSFarmId',
         'Get-SPSPublishedServiceAppPermission',
         'Get-SPSPublishedServiceAppProxy',
@@ -77,6 +79,7 @@ Describe 'SPSTrust.Common Public Functions' {
         'Get-SPSTopologyServiceAppPermission',
         'Get-SPSTrustedRootAuthority',
         'Get-SPSTrustedServiceTokenIssuer',
+        'Get-SPSTrustStatus',
         'New-SPSPublishedServiceAppProxy',
         'Publish-SPSServiceApplication',
         'Remove-SPSPublishedServiceAppProxy',
@@ -92,9 +95,11 @@ Describe 'SPSTrust.Common Public Functions' {
 
     It 'manifest FunctionsToExport matches the exported set' {
         $expectedExports = @(
+            'Backup-SPSJsonFile',
             'Clear-SPSLogFolder',
             'Export-SPSSecurityTokenCertificate',
             'Export-SPSTrustedRootAuthority',
+            'Export-SPSTrustReport',
             'Get-SPSFarmId',
             'Get-SPSPublishedServiceAppPermission',
             'Get-SPSPublishedServiceAppProxy',
@@ -103,6 +108,7 @@ Describe 'SPSTrust.Common Public Functions' {
             'Get-SPSTopologyServiceAppPermission',
             'Get-SPSTrustedRootAuthority',
             'Get-SPSTrustedServiceTokenIssuer',
+            'Get-SPSTrustStatus',
             'New-SPSPublishedServiceAppProxy',
             'Publish-SPSServiceApplication',
             'Remove-SPSPublishedServiceAppProxy',

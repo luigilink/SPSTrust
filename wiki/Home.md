@@ -9,6 +9,7 @@ It follows the Microsoft guidance [Share service applications across farms in Sh
 - Declarative, JSON-free configuration via a PowerShell data file (`.psd1`)
 - Idempotent: safe to re-run — it only creates what is missing
 - `-CleanServices` switch to tear down published services and trust
+- `-ReportOnly` read-only audit mode producing a JSON + HTML trust matrix
 - Shared logic packaged in the reusable `SPSTrust.Common` module
 - Transcript logging with automatic retention/rotation
 
@@ -17,6 +18,7 @@ It follows the Microsoft guidance [Share service applications across farms in Sh
 - [🚀 Getting Started](./Getting-Started)
 - [⚙️ Configuration](./Configuration)
 - [📖 Usage](./Usage)
+- [📊 Reports & Audit](./Reports)
 - [📦 Release Process](./Release-Process)
 
 ## Requirements

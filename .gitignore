@@ -1,1 +1,6 @@
 **/.DS_Store
+
+# Runtime output folders
+Logs/
+Results/
+Reports/
