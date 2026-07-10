@@ -4,10 +4,13 @@
 
     .DESCRIPTION
     SPSTrust.ps1 is a PowerShell script that configures SharePoint trust relationships between farms.
-    Compatible with PowerShell version 5.0 and later.
+    Shared logic lives in the SPSTrust.Common module (src/Modules/SPSTrust.Common); the script
+    version is sourced from that module's manifest (ModuleVersion).
+    Compatible with PowerShell version 5.1 and later.
 
     .PARAMETER ConfigFile
-    Specifies the path to the JSON configuration file, containing details about the application, environment, and certificate paths.
+    Specifies the path to the PowerShell data (.psd1) configuration file, containing details about
+    the application, environment, domain, certificate share, farms, and trust relationships.
 
     .PARAMETER FarmAccount
     Specifies the credential for the service account that runs the script.
@@ -15,15 +18,19 @@
     .PARAMETER CleanServices
     Optional switch to remove published services on each trusted farm.
 
+    .PARAMETER LogRetentionDays
+    Number of days of transcript log files to keep in the Logs folder. Defaults to 180.
+    Set to 0 to disable pruning.
+
     .EXAMPLE
-    SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -FarmAccount (Get-Credential)
-    SPSTrust.ps1 -ConfigFile 'contoso-PROD.json' -FarmAccount (Get-Credential) -CleanServices
+    SPSTrust.ps1 -ConfigFile '.\Config\CONTOSO-PROD.psd1' -FarmAccount (Get-Credential)
+    SPSTrust.ps1 -ConfigFile '.\Config\CONTOSO-PROD.psd1' -FarmAccount (Get-Credential) -CleanServices
 
     .NOTES
     FileName:	SPSTrust.ps1
     Author:		luigilink (Jean-Cyril DROUHIN)
-    Date:		October 17, 2024
-    Version:	1.1.0
+    Date:		July 10, 2026
+    Version:	Defined by the SPSTrust.Common module manifest (ModuleVersion)
 
     .LINK
     https://spjc.fr/
@@ -31,7 +38,7 @@
 #>
 param(
   [Parameter(Position = 1, Mandatory = $true)]
-  [ValidateScript({ (Test-Path $_) -and ($_ -like '*.json') })]
+  [ValidateScript({ (Test-Path $_) -and ($_ -like '*.psd1') })]
   [System.String]
   $ConfigFile, # Path to the configuration file
 
@@ -41,8 +48,14 @@ param(
 
   [Parameter(Position = 3)]
   [switch]
-  $CleanServices # Switch parameter to clean services
+  $CleanServices, # Switch parameter to clean services
+
+  [Parameter()]
+  [System.UInt32]
+  $LogRetentionDays = 180 # Number of days of transcript logs to keep
 )
+
+#requires -Version 5.1
 
 #region Initialization
 # Clear the host console
@@ -52,11 +65,20 @@ Clear-Host
 $Host.UI.RawUI.WindowTitle = "SPSTrust script running on $env:COMPUTERNAME"
 
 # Define the path to the helper module
-$scriptRootPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$scriptRootPath = $PSScriptRoot
 $script:HelperModulePath = Join-Path -Path $scriptRootPath -ChildPath 'Modules'
 
-# Import the helper module
-Import-Module -Name (Join-Path -Path $script:HelperModulePath -ChildPath 'util.psm1') -Force
+# Import the helper module (SPSTrust.Common)
+try {
+  Import-Module -Name (Join-Path -Path $script:HelperModulePath -ChildPath 'SPSTrust.Common\SPSTrust.Common.psd1') -Force -ErrorAction Stop
+}
+catch {
+  Write-Error -Message @"
+Failed to import SPSTrust.Common module from path: $($script:HelperModulePath)
+Exception: $_
+"@
+  Exit
+}
 
 # Ensure the script is running with administrator privileges
 if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
@@ -66,13 +88,13 @@ if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 # Load the configuration file
 try {
   if (Test-Path $ConfigFile) {
-    $jsonEnvCfg = Get-Content $ConfigFile | ConvertFrom-Json
-    $Application = $jsonEnvCfg.ApplicationName
-    $Environment = $jsonEnvCfg.ConfigurationName
-    $certFolder = $jsonEnvCfg.CertFileShared
-    $scriptFQDN = $jsonEnvCfg.Domain
-    $spFarmsObj = $jsonEnvCfg.Farms
-    $spTrustsObj = $jsonEnvCfg.Trusts
+    $EnvironmentConfig = Import-PowerShellDataFile -Path $ConfigFile
+    $Application = $EnvironmentConfig.ApplicationName
+    $Environment = $EnvironmentConfig.ConfigurationName
+    $certFolder = $EnvironmentConfig.CertFileShared
+    $scriptFQDN = $EnvironmentConfig.Domain
+    $spFarmsObj = $EnvironmentConfig.Farms
+    $spTrustsObj = $EnvironmentConfig.Trusts
   }
   else {
     Throw "Configuration file '$ConfigFile' not found."
@@ -84,7 +106,7 @@ catch {
 }
 
 # Define variables
-$SPSTrustVersion = '1.0.0'
+$SPSTrustVersion = (Get-Module -Name 'SPSTrust.Common').Version.ToString()
 $getDateFormatted = Get-Date -Format yyyy-MM-dd
 $spsTrustFileName = "$($Application)-$($Environment)-$($getDateFormatted)"
 $currentUser = ([Security.Principal.WindowsIdentity]::GetCurrent()).Name
@@ -181,7 +203,7 @@ foreach ($spFarm in $spFarmsObj) {
 
 # 1.2 Establish trust on the publishing farm - Import STS and ROOT certificates
 foreach ($spTrust in $spTrustsObj) {
-  $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
+  $spServer = $EnvironmentConfig.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
   $spTargetServer = "$($spServer.Server).$($scriptFQDN)"
   $spRemoteServers = $spTrust.RemoteFarms
   $spServices = $spTrust.Services
@@ -301,7 +323,7 @@ Exception: $_
 
 # 2. On the publishing farm, publish the service application
 foreach ($spTrust in $spTrustsObj) {
-  $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
+  $spServer = $EnvironmentConfig.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
   $spTargetServer = "$($spServer.Server).$($scriptFQDN)"
   $spServices = $spTrust.Services
 
@@ -361,7 +383,7 @@ Exception: $_
 
 # 3. On the publishing farm, set the permission to the appropriate service applications for the consuming farm.
 foreach ($spTrust in $spTrustsObj) {
-  $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
+  $spServer = $EnvironmentConfig.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
   $spTargetServer = "$($spServer.Server).$($scriptFQDN)"
   $spRemoteFarms = $spTrust.RemoteFarms
   $spServices = $spTrust.Services
@@ -370,7 +392,7 @@ foreach ($spTrust in $spTrustsObj) {
   foreach ($spRemoteFarm in $spRemoteFarms) {
     # Get the Farm ID for the remote server
     try {
-      $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spRemoteFarm }
+      $spServer = $EnvironmentConfig.Farms | Where-Object -FilterScript { $_.Name -eq $spRemoteFarm }
       $spRemoteServer = "$($spServer.Server).$($scriptFQDN)"
       Write-Output "[$($spRemoteServer)] Getting GUID property of SPFarm Object"
       $spFarmID = Get-SPSFarmId -Server $spRemoteServer -InstallAccount $FarmAccount
@@ -453,7 +475,7 @@ Exception: $_
       foreach ($spRemoteFarm in $spRemoteFarms) {
         # Get the Farm ID for the remote server
         try {
-          $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spRemoteFarm }
+          $spServer = $EnvironmentConfig.Farms | Where-Object -FilterScript { $_.Name -eq $spRemoteFarm }
           $spRemoteServer = "$($spServer.Server).$($scriptFQDN)"
           Write-Output "[$($spRemoteServer)] Getting GUID property of SPFarm Object"
           $spFarmID = Get-SPSFarmId -Server $spRemoteServer -InstallAccount $FarmAccount
@@ -537,7 +559,7 @@ Exception: $_
 
 # 4. Connect each published service application on remote farm
 foreach ($spTrust in $spTrustsObj) {
-  $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
+  $spServer = $EnvironmentConfig.Farms | Where-Object -FilterScript { $_.Name -eq $spTrust.LocalFarm }
   $spTargetServer = "$($spServer.Server).$($scriptFQDN)"
   $spRemoteFarms = $spTrust.RemoteFarms
   $spServices = $spTrust.Services
@@ -552,7 +574,7 @@ foreach ($spTrust in $spTrustsObj) {
       # Loop through each remote server in the $spRemoteServers array
       foreach ($spRemoteFarm in $spRemoteFarms) {
         # Find the server configuration for the current remote server
-        $spServer = $jsonEnvCfg.Farms | Where-Object -FilterScript { $_.Name -eq $spRemoteFarm }
+        $spServer = $EnvironmentConfig.Farms | Where-Object -FilterScript { $_.Name -eq $spRemoteFarm }
         $spRemoteServer = "$($spServer.Server).$($scriptFQDN)"
 
         try {
@@ -621,6 +643,10 @@ Exception: $_
 
 # Clean-Up
 Trap { Continue }
+
+# Prune old transcript logs based on the retention window
+Clear-SPSLogFolder -Path $pathLogsFolder -Retention $LogRetentionDays -Extension '*.log'
+
 $DateEnded = Get-Date
 Write-Output '-----------------------------------------------'
 Write-Output "| SPSTrust Script Completed"
