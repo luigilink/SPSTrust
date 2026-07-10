@@ -1,39 +1,36 @@
 # SPSTrust - Release Notes
 
-## [1.0.0] - 2023-11-05
+## [2.0.0] - 2026-07-10
+
+> [!IMPORTANT]
+> This is a major release with breaking changes. The package layout moved from
+> `scripts/` to `src/`, and the configuration format changed from JSON to a PowerShell
+> data file (`.psd1`). Convert your JSON configuration to the equivalent `.psd1` hashtable
+> (see the [Configuration](https://github.com/luigilink/SPSTrust/wiki/Configuration) wiki
+> page) before upgrading.
 
 ### Added
 
-- Add RELEASE-NOTES.md file
-- Add CHANGELOG.md file
-- Add CONTRIBUTING.md file
-- Add release.yml file
-- Add scripts folder with first version of SPSTrust
-- README.md
-  - Add code_of_conduct.md badge
-- Add CODE_OF_CONDUCT.md file
-- Add Issue Templates files:
-  - 1_bug_report.yml
-  - 2_feature_request.yml
-  - 3_documentation_request.yml
-  - 4_improvement_request.yml
-  - config.yml
-- Wiki Documentation in repository - Add :
-  - wiki/Home.md
-  - wiki/Getting-Started.md
-  - wiki/Configuration.md
-  - wiki/Usage.md
-  - .github/workflows/wiki.yml
+- New reusable `SPSTrust.Common` module (Public/Private layout, manifest-driven version).
+- `-LogRetentionDays` parameter with automatic transcript log rotation.
+- Example `.psd1` configuration, Pester test suite, PSScriptAnalyzer settings, and a
+  Pester CI workflow.
+- Wiki sidebar and Release Process page.
 
 ### Changed
 
-- SPSTrust.ps1:
-  - Update parameter description
-  - Add [ValidateScript({ Test-Path $_ -and $_ -like '*.json' })] in ConfigFile parameter
-  - Add missing comments
-  - Add CleanServices :
-    - Publish the service application section
-    - Permissions on Application Discovery and Load Balancing Service Application
-    - Permission to a published service application for a consuming farm
+- **BREAKING**: `scripts/` → `src/`; release archives extract to `SPSTrust.ps1` + `Modules/`.
+- **BREAKING**: configuration is now a `.psd1` data file loaded with `Import-PowerShellDataFile`.
+- Script version sourced from the module manifest.
+- Workflows bumped (`checkout@v7`, `action-gh-release@v3`); README trimmed to defer to the wiki.
 
-A full list of changes in each version can be found in the [change log](CHANGELOG.md)
+### Fixed
+
+- Wiki `Usage` examples (wrong script name and a missing mandatory `-FarmAccount`).
+
+### Removed
+
+- `scripts/` folder, the monolithic `sps.util.psm1` / `util.psm1` modules, and the unused
+  `Clear-SPSLog` helper.
+
+A full list of changes in each version can be found in the [change log](CHANGELOG.md).
