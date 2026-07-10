@@ -3,34 +3,40 @@
 ![Latest release date](https://img.shields.io/github/release-date/luigilink/SPSTrust.svg?style=flat)
 ![Total downloads](https://img.shields.io/github/downloads/luigilink/SPSTrust/total.svg?style=flat)  
 ![Issues opened](https://img.shields.io/github/issues/luigilink/SPSTrust.svg?style=flat)
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](code_of_conduct.md)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 ## Description
 
-SPSTrust is a PowerShell script tool to configure trust Farm in your SharePoint environment. The script follows the documentation: [Share service applications across farms in SharePoint Server](https://learn.microsoft.com/en-us/sharepoint/administration/share-service-applications-across-farms).
+SPSTrust is a PowerShell script tool to configure trust relationships between SharePoint
+Server farms — exchanging STS/ROOT certificates, publishing service applications, granting
+Topology and published service-application permissions, and connecting service application
+proxies across farms.
 
-It's compatible with all supported versions for SharePoint OnPremises (2016 to Subscription Edition).
+It follows the Microsoft guidance [Share service applications across farms in SharePoint Server](https://learn.microsoft.com/en-us/sharepoint/administration/share-service-applications-across-farms)
+and is compatible with all supported on-premises versions (SharePoint Server 2016 to
+Subscription Edition).
 
-[Download the latest release, Click here!](https://github.com/luigilink/SPSTrust/releases/latest)
+[Download the latest release here!](https://github.com/luigilink/SPSTrust/releases/latest)
 
 ## Requirements
 
-### Windows Management Framework 5.0
+- PowerShell 5.1 or later
+- CredSSP configured between the servers
+- Administrative privileges on the SharePoint servers
+- The **same** farm service account used across all farms being trusted
 
-Required because this module now implements class-based resources.
-Class-based resources can only work on computers with Windows
-Management Framework 5.0 or above.
-The preferred version is PowerShell 5.1 or higher, which ships with Windows 10 or Windows Server 2016.
-This is discussed further on the [SPSTrust Wiki Getting-Started](https://github.com/luigilink/SPSTrust/wiki/Getting-Started)
-
-## CredSSP
-
-Impersonation is handled using the `Invoke-Command` cmdlet in PowerShell, together with the creation of a "remote" session via `New-PSSession`. In the SPSTrust script, we authenticate as the InstallAccount and specify CredSSP as the authentication mechanism. This is explained further in the [SPSTrust Wiki Getting-Started](https://github.com/luigilink/SPSTrust/wiki/Getting-Started)
+See the [Getting Started](https://github.com/luigilink/SPSTrust/wiki/Getting-Started) wiki page for details.
 
 ## Documentation
 
-For detailed usage, configuration, and getting started information, visit the [SPSTrust Wiki](https://github.com/luigilink/SPSTrust/wiki)
+For usage, configuration, and getting-started information, visit the
+[SPSTrust Wiki](https://github.com/luigilink/SPSTrust/wiki):
+
+- [Getting Started](https://github.com/luigilink/SPSTrust/wiki/Getting-Started)
+- [Configuration](https://github.com/luigilink/SPSTrust/wiki/Configuration)
+- [Usage](https://github.com/luigilink/SPSTrust/wiki/Usage)
+- [Release Process](https://github.com/luigilink/SPSTrust/wiki/Release-Process)
 
 ## Changelog
 
-A full list of changes in each version can be found in the [change log](CHANGELOG.md)
+A full list of changes in each version can be found in the [change log](CHANGELOG.md).
