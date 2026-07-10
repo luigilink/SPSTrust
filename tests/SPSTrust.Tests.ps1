@@ -118,6 +118,44 @@ Describe 'SPSTrust.ps1 Parameters' {
         }
         $logParam | Should -Not -BeNullOrEmpty
     }
+
+    It 'Should expose a ReportOnly switch' {
+        $reportParam = $script:paramBlock.Parameters | Where-Object {
+            $_.Name.VariablePath.UserPath -eq 'ReportOnly'
+        }
+        $reportParam | Should -Not -BeNullOrEmpty
+        $reportParam.StaticType.Name | Should -Be 'SwitchParameter'
+    }
+
+    It 'Should expose a HistoryRetentionDays parameter' {
+        $histParam = $script:paramBlock.Parameters | Where-Object {
+            $_.Name.VariablePath.UserPath -eq 'HistoryRetentionDays'
+        }
+        $histParam | Should -Not -BeNullOrEmpty
+    }
+}
+
+Describe 'SPSTrust.ps1 report wiring' {
+
+    It 'guards the mutating stages behind -ReportOnly' {
+        $script:scriptContent | Should -Match 'if \(-not \$ReportOnly\)'
+    }
+
+    It 'collects state with the read-only Get-SPSTrustStatus' {
+        $script:scriptContent | Should -Match 'Get-SPSTrustStatus'
+    }
+
+    It 'archives the previous results with Backup-SPSJsonFile' {
+        $script:scriptContent | Should -Match 'Backup-SPSJsonFile'
+    }
+
+    It 'renders the report with Export-SPSTrustReport' {
+        $script:scriptContent | Should -Match 'Export-SPSTrustReport'
+    }
+
+    It 'prunes result-history snapshots with Clear-SPSLogFolder' {
+        $script:scriptContent | Should -Match "Clear-SPSLogFolder -Path \`$pathHistoryFolder"
+    }
 }
 
 Describe 'SPSTrust example configuration' {

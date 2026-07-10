@@ -51,8 +51,16 @@ param(
   $CleanServices, # Switch parameter to clean services
 
   [Parameter()]
+  [switch]
+  $ReportOnly, # Read-only audit: collect trust state and write a report, change nothing
+
+  [Parameter()]
   [System.UInt32]
-  $LogRetentionDays = 180 # Number of days of transcript logs to keep
+  $LogRetentionDays = 180, # Number of days of transcript logs to keep
+
+  [Parameter()]
+  [System.UInt32]
+  $HistoryRetentionDays = 30 # Number of days of archived result snapshots to keep
 )
 
 #requires -Version 5.1
@@ -111,14 +119,27 @@ $getDateFormatted = Get-Date -Format yyyy-MM-dd
 $spsTrustFileName = "$($Application)-$($Environment)-$($getDateFormatted)"
 $currentUser = ([Security.Principal.WindowsIdentity]::GetCurrent()).Name
 $pathLogsFolder = Join-Path -Path $scriptRootPath -ChildPath 'Logs'
+$pathResultsFolder = Join-Path -Path $scriptRootPath -ChildPath 'Results'
+$pathHistoryFolder = Join-Path -Path $pathResultsFolder -ChildPath 'history'
+$pathReportsFolder = Join-Path -Path $scriptRootPath -ChildPath 'Reports'
+$resultsBaseName = "$($Application)-$($Environment)"
+$pathResultsFile = Join-Path -Path $pathResultsFolder -ChildPath ($resultsBaseName + '.json')
+$pathReportFile = Join-Path -Path $pathReportsFolder -ChildPath ($resultsBaseName + '.html')
 
-# Initialize logs
+# Initialize logs, results and reports folders
 if (-Not (Test-Path -Path $pathLogsFolder)) {
   New-Item -ItemType Directory -Path $pathLogsFolder -Force
+}
+if (-Not (Test-Path -Path $pathResultsFolder)) {
+  New-Item -ItemType Directory -Path $pathResultsFolder -Force
+}
+if (-Not (Test-Path -Path $pathReportsFolder)) {
+  New-Item -ItemType Directory -Path $pathReportsFolder -Force
 }
 $pathLogFile = Join-Path -Path $pathLogsFolder -ChildPath ($spsTrustFileName + '.log')
 $DateStarted = Get-Date
 $psVersion = ($Host).Version.ToString()
+$runMode = if ($ReportOnly) { 'ReportOnly (read-only audit)' } elseif ($CleanServices) { 'CleanServices' } else { 'Configure' }
 
 # Start transcript to log the output
 Start-Transcript -Path $pathLogFile -IncludeInvocationHeader
@@ -128,6 +149,7 @@ Write-Output '-----------------------------------------------'
 Write-Output "| SPSTrust Configuration Script v$SPSTrustVersion"
 Write-Output "| Started on - $DateStarted by $currentUser"
 Write-Output "| PowerShell Version - $psVersion"
+Write-Output "| Mode - $runMode"
 Write-Output '-----------------------------------------------'
 #endregion
 
@@ -137,7 +159,8 @@ Write-Output '-----------------------------------------------'
 Write-Verbose -Message "Setting power management plan to 'High Performance'..."
 Start-Process -FilePath "$env:SystemRoot\system32\powercfg.exe" -ArgumentList '/s 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c' -NoNewWindow
 
-# 1. Exchange trust certificates between the farms
+if (-not $ReportOnly) {
+  # 1. Exchange trust certificates between the farms
 # 1.1 Export STS and ROOT certificates for each Farm
 foreach ($spFarm in $spFarmsObj) {
   $spRootCertPath = "$($certFolder)\$($spFarm.Name)_ROOT.cer"
@@ -638,6 +661,42 @@ Exception: $_
       }
     }
   }
+}
+}
+# end of if (-not $ReportOnly) - the four mutating stages are skipped in report-only mode
+
+# 5. Collect the current trust state and produce the JSON results + HTML report.
+# This is always done (both after a normal/clean run and in -ReportOnly audit mode)
+# and is strictly read-only.
+Write-Output '-----------------------------------------------'
+Write-Output "| Collecting trust state and generating report"
+Write-Output '-----------------------------------------------'
+try {
+  $trustStatus = Get-SPSTrustStatus -Farms $spFarmsObj `
+    -Trusts $spTrustsObj `
+    -Domain $scriptFQDN `
+    -InstallAccount $FarmAccount `
+    -Application $Application `
+    -Environment $Environment `
+    -Version $SPSTrustVersion
+
+  # Archive the previous results snapshot before overwriting, then prune old snapshots.
+  $null = Backup-SPSJsonFile -Path $pathResultsFile -HistoryFolder $pathHistoryFolder
+  Clear-SPSLogFolder -Path $pathHistoryFolder -Retention $HistoryRetentionDays -Extension '*.json'
+
+  # Write the fresh results JSON.
+  $trustStatus | ConvertTo-Json -Depth 6 | Set-Content -Path $pathResultsFile -Encoding UTF8
+  Write-Output "[Results] $pathResultsFile"
+
+  # Render the HTML trust matrix report.
+  $null = Export-SPSTrustReport -Status $trustStatus -OutputPath $pathReportFile
+  Write-Output "[Report]  $pathReportFile"
+}
+catch {
+  Write-Error -Message @"
+Failed to collect trust state or generate the report.
+Exception: $_
+"@
 }
 #endregion
 
