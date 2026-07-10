@@ -1,6 +1,6 @@
 @{
     RootModule        = 'SPSTrust.Common.psm1'
-    ModuleVersion     = '2.0.0'
+    ModuleVersion     = '2.1.0'
     GUID              = 'e1cce4f2-12de-4923-8e67-f37a081944aa'
     Author            = 'Jean-Cyril DROUHIN'
     CompanyName       = 'luigilink'
@@ -10,9 +10,11 @@
     PowerShellVersion = '5.1'
 
     FunctionsToExport = @(
+        'Backup-SPSJsonFile'
         'Clear-SPSLogFolder'
         'Export-SPSSecurityTokenCertificate'
         'Export-SPSTrustedRootAuthority'
+        'Export-SPSTrustReport'
         'Get-SPSFarmId'
         'Get-SPSPublishedServiceAppPermission'
         'Get-SPSPublishedServiceAppProxy'
@@ -21,6 +23,7 @@
         'Get-SPSTopologyServiceAppPermission'
         'Get-SPSTrustedRootAuthority'
         'Get-SPSTrustedServiceTokenIssuer'
+        'Get-SPSTrustStatus'
         'New-SPSPublishedServiceAppProxy'
         'Publish-SPSServiceApplication'
         'Remove-SPSPublishedServiceAppProxy'
