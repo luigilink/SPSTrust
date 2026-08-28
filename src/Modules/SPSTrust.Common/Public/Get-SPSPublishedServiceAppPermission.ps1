@@ -1,4 +1,4 @@
-function Get-SPSPublishedServiceAppPermission {
+﻿function Get-SPSPublishedServiceAppPermission {
   [CmdletBinding()]
   [OutputType([System.Collections.Hashtable])]
   param

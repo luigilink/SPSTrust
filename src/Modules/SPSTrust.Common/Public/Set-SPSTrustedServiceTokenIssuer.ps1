@@ -1,4 +1,4 @@
-function Set-SPSTrustedServiceTokenIssuer {
+﻿function Set-SPSTrustedServiceTokenIssuer {
   [CmdletBinding()]
   param
   (

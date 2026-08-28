@@ -1,4 +1,4 @@
-# Pester tests for the SPSTrust.Common module.
+﻿# Pester tests for the SPSTrust.Common module.
 # Resolve repo root - works on both local and CI/CD.
 
 BeforeAll {

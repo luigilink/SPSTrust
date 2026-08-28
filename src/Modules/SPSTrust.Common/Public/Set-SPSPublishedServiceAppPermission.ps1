@@ -1,4 +1,4 @@
-function Set-SPSPublishedServiceAppPermission {
+﻿function Set-SPSPublishedServiceAppPermission {
   [CmdletBinding()]
   param
   (

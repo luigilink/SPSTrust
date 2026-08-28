@@ -1,4 +1,4 @@
-function Get-SPSTopologyServiceAppPermission {
+﻿function Get-SPSTopologyServiceAppPermission {
   [CmdletBinding()]
   [OutputType([System.Collections.Hashtable])]
   param

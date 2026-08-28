@@ -1,4 +1,4 @@
-function Get-SPSTrustedRootAuthority {
+﻿function Get-SPSTrustedRootAuthority {
   [CmdletBinding()]
   [OutputType([System.Collections.Hashtable])]
   param

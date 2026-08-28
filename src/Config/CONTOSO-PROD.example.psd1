@@ -1,4 +1,4 @@
-@{
+﻿@{
     # SPSTrust configuration file (PowerShell data file).
     # Copy this example to '<Application>-<Environment>.psd1' (e.g. CONTOSO-PROD.psd1)
     # and adjust the values to match your environment, then run:

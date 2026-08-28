@@ -1,4 +1,4 @@
-function Get-SPSFarmId {
+﻿function Get-SPSFarmId {
   [CmdletBinding()]
   [OutputType([System.Collections.Hashtable])]
   param

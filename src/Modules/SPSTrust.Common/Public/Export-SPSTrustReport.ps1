@@ -1,4 +1,4 @@
-function Export-SPSTrustReport {
+﻿function Export-SPSTrustReport {
     <#
         .SYNOPSIS
         Renders a trust status object (or results JSON file) into a self-contained HTML report.

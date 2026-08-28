@@ -1,4 +1,4 @@
-function Publish-SPSServiceApplication {
+﻿function Publish-SPSServiceApplication {
   [CmdletBinding()]
   param
   (

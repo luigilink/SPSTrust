@@ -1,4 +1,4 @@
-function Set-SPSTrustedRootAuthority {
+﻿function Set-SPSTrustedRootAuthority {
   [CmdletBinding()]
   param
   (

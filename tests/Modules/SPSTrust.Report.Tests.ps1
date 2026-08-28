@@ -1,4 +1,4 @@
-# Pester tests for the SPSTrust.Common reporting/audit functions (2.1.0):
+﻿# Pester tests for the SPSTrust.Common reporting/audit functions (2.1.0):
 # Get-SPSTrustStatus, Export-SPSTrustReport, Backup-SPSJsonFile and the private
 # HTML report helpers.
 

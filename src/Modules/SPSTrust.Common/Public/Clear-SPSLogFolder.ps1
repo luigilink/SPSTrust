@@ -1,4 +1,4 @@
-function Clear-SPSLogFolder {
+﻿function Clear-SPSLogFolder {
     <#
         .SYNOPSIS
         Deletes old files from a folder based on a retention window.

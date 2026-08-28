@@ -1,4 +1,4 @@
-function New-SPSPublishedServiceAppProxy {
+﻿function New-SPSPublishedServiceAppProxy {
   [CmdletBinding()]
   param
   (

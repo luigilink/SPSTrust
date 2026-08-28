@@ -1,4 +1,4 @@
-function Remove-SPSPublishedServiceAppProxy {
+﻿function Remove-SPSPublishedServiceAppProxy {
   [CmdletBinding()]
   param
   (
