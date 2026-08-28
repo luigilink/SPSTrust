@@ -2,7 +2,10 @@
 
 SPSTrust is a PowerShell script tool to configure trust relationships between SharePoint Server farms — exchanging STS/ROOT certificates, publishing service applications, granting Topology and published service-application permissions, and connecting service application proxies across farms.
 
-It follows the Microsoft guidance [Share service applications across farms in SharePoint Server](https://learn.microsoft.com/en-us/sharepoint/administration/share-service-applications-across-farms) and is compatible with all supported on-premises versions (SharePoint Server 2016 to Subscription Edition).
+It follows the Microsoft guidance [Share service applications across farms in SharePoint Server](https://learn.microsoft.com/en-us/sharepoint/administration/share-service-applications-across-farms) and is compatible with **SharePoint Server Subscription Edition**.
+
+> [!NOTE]
+> SharePoint Server 2016 and 2019 reached end of support on 14 July 2026. For those versions, use the previous major release (v2.1.0).
 
 ## Key Features
 
