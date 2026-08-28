@@ -1,33 +1,29 @@
 # SPSTrust - Release Notes
 
-## [2.1.0] - 2026-07-10
+## [3.0.0] - 2026-08-28
 
-This release adds a read-only **trust matrix** report, produced both at the end of a
-normal run and in a new dedicated audit mode. It is fully backward compatible with 2.0.0.
+> [!IMPORTANT]
+> This is a major release with a breaking change: support for SharePoint Server 2016 and
+> 2019 has been removed. If you still run SharePoint Server 2016 or 2019, stay on the
+> previous major release (v2.1.0).
 
-### Added
+### Removed
 
-- **`-ReportOnly`** — read-only audit mode: skips all configuration stages and only
-  collects the current trust state and writes the report (changes nothing).
-- **Trust matrix report** — every run now writes a JSON snapshot
-  (`Results\<Application>-<Environment>.json`) and a self-contained, offline HTML report
-  (`Reports\<Application>-<Environment>.html`) showing, per publishing-farm /
-  consuming-farm / service, the state of each trust dimension (ROOT, STS, Published,
-  Topology permission, SA permission, Proxy) as Present / Absent / N/A / Error.
-- New public functions in `SPSTrust.Common`: `Get-SPSTrustStatus` (read-only collector),
-  `Export-SPSTrustReport` (HTML renderer, also usable standalone via `-InputFile`) and
-  `Backup-SPSJsonFile`.
-- **`-HistoryRetentionDays`** (default 30) — rotation of archived result snapshots in
-  `Results\history\`.
-- Wiki: new **Reports & Audit** page.
+- **BREAKING**: dropped support for SharePoint Server 2016 and 2019 (both reached end of
+  support on 14 July 2026). The deprecated `Microsoft.SharePoint.PowerShell` PSSnapin path
+  (`Add-PSSnapin`) has been removed from the CredSSP remoting base script.
 
 ### Changed
 
-- `.gitignore` excludes the runtime `Logs/`, `Results/` and `Reports/` folders.
+- **BREAKING**: the remoting base script now loads the Subscription Edition
+  `SharePointServer` module (`Import-Module SharePointServer`, idempotent) as the only
+  supported code path.
+- Documentation (README, wiki) updated to state compatibility with SharePoint Server
+  Subscription Edition only.
 
-### Compatibility
+### Migration
 
-- No breaking changes. Existing `-ConfigFile` / `-FarmAccount` / `-CleanServices` usage is
-  unchanged; the reporting stage is additive and read-only.
+- Users still running SharePoint Server 2016 or 2019 must stay on the previous major
+  release (**v2.1.0**), which retains the PSSnapin code path.
 
 A full list of changes in each version can be found in the [change log](CHANGELOG.md).
