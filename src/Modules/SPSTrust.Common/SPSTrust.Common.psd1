@@ -1,6 +1,6 @@
 @{
     RootModule        = 'SPSTrust.Common.psm1'
-    ModuleVersion     = '2.1.0'
+    ModuleVersion     = '3.0.0'
     GUID              = 'e1cce4f2-12de-4923-8e67-f37a081944aa'
     Author            = 'Jean-Cyril DROUHIN'
     CompanyName       = 'luigilink'

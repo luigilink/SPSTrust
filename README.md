@@ -13,8 +13,11 @@ Topology and published service-application permissions, and connecting service a
 proxies across farms.
 
 It follows the Microsoft guidance [Share service applications across farms in SharePoint Server](https://learn.microsoft.com/en-us/sharepoint/administration/share-service-applications-across-farms)
-and is compatible with all supported on-premises versions (SharePoint Server 2016 to
-Subscription Edition).
+and is compatible with **SharePoint Server Subscription Edition**.
+
+> [!NOTE]
+> SharePoint Server 2016 and 2019 reached end of support on 14 July 2026. For those
+> versions, use the previous major release ([v2.1.0](https://github.com/luigilink/SPSTrust/releases/tag/v2.1.0)).
 
 [Download the latest release here!](https://github.com/luigilink/SPSTrust/releases/latest)
 

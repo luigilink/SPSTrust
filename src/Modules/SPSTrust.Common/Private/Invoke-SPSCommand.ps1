@@ -15,11 +15,11 @@ function Invoke-SPSCommand {
         $Server # Target server where the commands will be executed
     )
     $VerbosePreference = 'Continue'
-    # Base script to ensure the SharePoint snap-in is loaded
+    # Base script to ensure the SharePoint Server module is loaded on the remote host
     $baseScript = @"
-    if (`$null -eq (Get-PSSnapin -Name Microsoft.SharePoint.PowerShell -ErrorAction SilentlyContinue))
+    if (`$null -eq (Get-Module -Name SharePointServer))
     {
-        Add-PSSnapin Microsoft.SharePoint.PowerShell
+        Import-Module -Name SharePointServer -Verbose:`$false -WarningAction SilentlyContinue -DisableNameChecking
     }
 "@
 
