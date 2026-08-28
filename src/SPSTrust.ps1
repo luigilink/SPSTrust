@@ -1,4 +1,4 @@
-<#
+﻿<#
     .SYNOPSIS
     SPSTrust is a PowerShell script tool to configure trusted farms in your SharePoint environment.
 

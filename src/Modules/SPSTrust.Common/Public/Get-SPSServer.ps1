@@ -1,4 +1,4 @@
-function Get-SPSServer {
+﻿function Get-SPSServer {
     [CmdletBinding()]
     [OutputType([System.Collections.Hashtable])]
     param (

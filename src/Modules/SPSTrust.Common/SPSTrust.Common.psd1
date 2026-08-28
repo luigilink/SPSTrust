@@ -1,4 +1,4 @@
-@{
+﻿@{
     RootModule        = 'SPSTrust.Common.psm1'
     ModuleVersion     = '3.0.0'
     GUID              = 'e1cce4f2-12de-4923-8e67-f37a081944aa'

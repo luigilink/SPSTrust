@@ -1,4 +1,4 @@
-function Get-SPSReportCardHtml {
+﻿function Get-SPSReportCardHtml {
     <#
         .SYNOPSIS
         Builds the HTML for one summary "card" (a big number plus a label).

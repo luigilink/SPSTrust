@@ -1,4 +1,4 @@
-function Get-SPSTrustStatus {
+﻿function Get-SPSTrustStatus {
     <#
         .SYNOPSIS
         Collects the current cross-farm trust state as a read-only status object.

@@ -1,4 +1,4 @@
-function Export-SPSTrustedRootAuthority {
+﻿function Export-SPSTrustedRootAuthority {
   [CmdletBinding()]
   param
   (

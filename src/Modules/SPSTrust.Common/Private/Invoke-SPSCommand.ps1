@@ -1,4 +1,4 @@
-function Invoke-SPSCommand {
+﻿function Invoke-SPSCommand {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

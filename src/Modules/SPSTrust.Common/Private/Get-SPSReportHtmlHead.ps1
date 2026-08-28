@@ -1,4 +1,4 @@
-function Get-SPSReportHtmlHead {
+﻿function Get-SPSReportHtmlHead {
     <#
         .SYNOPSIS
         Returns the document head (with the embedded stylesheet) and the opening body tag.

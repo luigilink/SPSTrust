@@ -1,4 +1,4 @@
-function ConvertTo-SPSHtmlEncoded {
+﻿function ConvertTo-SPSHtmlEncoded {
     <#
         .SYNOPSIS
         HTML-encodes a string for safe insertion into generated HTML reports.

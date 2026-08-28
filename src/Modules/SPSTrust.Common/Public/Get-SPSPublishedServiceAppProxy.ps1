@@ -1,4 +1,4 @@
-function Get-SPSPublishedServiceAppProxy {
+﻿function Get-SPSPublishedServiceAppProxy {
   [CmdletBinding()]
   [OutputType([System.Collections.Hashtable])]
   param

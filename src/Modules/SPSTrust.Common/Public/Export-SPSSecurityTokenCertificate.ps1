@@ -1,4 +1,4 @@
-function Export-SPSSecurityTokenCertificate {
+﻿function Export-SPSSecurityTokenCertificate {
   [CmdletBinding()]
   param
   (

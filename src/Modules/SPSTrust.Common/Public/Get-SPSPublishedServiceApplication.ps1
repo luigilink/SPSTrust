@@ -1,4 +1,4 @@
-function Get-SPSPublishedServiceApplication {
+﻿function Get-SPSPublishedServiceApplication {
   [CmdletBinding()]
   [OutputType([System.Collections.Hashtable])]
   param

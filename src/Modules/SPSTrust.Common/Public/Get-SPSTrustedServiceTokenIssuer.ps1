@@ -1,4 +1,4 @@
-function Get-SPSTrustedServiceTokenIssuer {
+﻿function Get-SPSTrustedServiceTokenIssuer {
   [CmdletBinding()]
   [OutputType([System.Collections.Hashtable])]
   param

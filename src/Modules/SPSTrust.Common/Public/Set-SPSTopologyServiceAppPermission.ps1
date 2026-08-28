@@ -1,4 +1,4 @@
-function Set-SPSTopologyServiceAppPermission {
+﻿function Set-SPSTopologyServiceAppPermission {
   [CmdletBinding()]
   param
   (

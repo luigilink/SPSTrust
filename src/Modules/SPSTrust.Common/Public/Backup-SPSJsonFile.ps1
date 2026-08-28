@@ -1,4 +1,4 @@
-function Backup-SPSJsonFile {
+﻿function Backup-SPSJsonFile {
     <#
         .SYNOPSIS
         Archives an existing results JSON snapshot into a history folder before it is overwritten.
